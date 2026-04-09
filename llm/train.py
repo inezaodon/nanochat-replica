@@ -39,6 +39,18 @@ def main():
     ap.add_argument("--data", type=str, default="data/shakespeare.txt")
     ap.add_argument("--out_dir", type=str, default="checkpoints/tiny-gpt")
     ap.add_argument("--vocab_size", type=int, default=4096)
+    ap.add_argument(
+        "--tokenizer_chars",
+        type=int,
+        default=200_000,
+        help="Train the tokenizer on only the first N characters for speed (0 = full text).",
+    )
+    ap.add_argument(
+        "--train_chars",
+        type=int,
+        default=300_000,
+        help="Train the model on only the first N characters for speed (0 = full text).",
+    )
     ap.add_argument("--block_size", type=int, default=128)
     ap.add_argument("--n_layer", type=int, default=4)
     ap.add_argument("--n_head", type=int, default=12)
@@ -58,10 +70,18 @@ def main():
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    text = Path(args.data).read_text(encoding="utf-8")
+    text_full = Path(args.data).read_text(encoding="utf-8")
+    text_tok = text_full if args.tokenizer_chars == 0 else text_full[: args.tokenizer_chars]
+    text_train = text_full if args.train_chars == 0 else text_full[: args.train_chars]
+
+    print(f"[data] tokenizer_chars={len(text_tok):,} train_chars={len(text_train):,} file_chars={len(text_full):,}")
     tok = RegexBPETokenizer()
-    tok.train(text, args.vocab_size, verbose=True)
-    ids = tok.encode(text)
+    print("[tokenizer] training BPE…")
+    tok.train(text_tok, args.vocab_size, verbose=True)
+    print(f"[tokenizer] done. vocab={len(tok.vocab):,} merges={len(tok.merges):,}")
+    print("[tokenizer] encoding training text…")
+    ids = tok.encode(text_train)
+    print(f"[tokenizer] encoded tokens={len(ids):,}")
 
     # Save tokenizer export next to checkpoint for later browser export
     (out_dir / "tokenizer.json").write_text(json.dumps(tok.export_json()), encoding="utf-8")
