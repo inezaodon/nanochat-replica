@@ -1,151 +1,95 @@
 import json
-import math
 import re
 from collections import Counter
-from dataclasses import dataclass
-from typing import Dict, List, Tuple
-
-
-def _pair_key(a: int, b: int) -> str:
-    return f"{a},{b}"
-
-
-def _bytes_to_str(b: bytes) -> str:
-    return b.decode("utf-8", errors="replace")
-
-
-def _str_to_bytes(s: str) -> bytes:
-    return s.encode("utf-8")
-
-
-@dataclass
-class TokenizerExport:
-    # JSON-serializable export consumed by the web app.
-    merges: Dict[str, int]  # "a,b" -> new_id
-    vocab: Dict[str, str]   # id -> base64? (we store latin-1 string for bytes)
-    special_tokens: Dict[str, int]
+from typing import Dict, List
 
 
 class RegexBPETokenizer:
     """
-    BPE on UTF-8 bytes with a regex pre-split (Lab 01 concept),
-    exported in a format that can be loaded in JS/TS.
+    Character-level tokenizer (no BPE merges).
+    Kept under the same class name for compatibility with existing imports.
     """
 
     def __init__(self):
-        self.merges: Dict[str, int] = {}
-        self.vocab: Dict[int, bytes] = {i: bytes([i]) for i in range(256)}
-        self.special_tokens: Dict[str, int] = {
-            "<|sos|>": 256,
-            "<|eos|>": 257,
-            "<|unk|>": 258,
-        }
-        for k, v in self.special_tokens.items():
-            self.vocab[v] = _str_to_bytes(k)
-
-        # Browser-friendly regex close to the TS version.
         self.pattern = re.compile(
             r"'s|'t|'re|'ve|'m|'ll|'d| ?[A-Za-z]+| ?[0-9]+| ?[^ \t\r\nA-Za-z0-9]+|\s+(?!\S)|\s+"
         )
-
-    def _get_stats(self, ids: List[int]) -> Counter:
-        c = Counter()
-        for a, b in zip(ids, ids[1:]):
-            c[(a, b)] += 1
-        return c
-
-    def _merge_pairs(self, ids: List[int], pair: Tuple[int, int], new_id: int) -> List[int]:
-        a, b = pair
-        out: List[int] = []
-        i = 0
-        while i < len(ids):
-            if i < len(ids) - 1 and ids[i] == a and ids[i + 1] == b:
-                out.append(new_id)
-                i += 2
-            else:
-                out.append(ids[i])
-                i += 1
-        return out
+        self.merges: Dict[str, int] = {}
+        self.vocab: Dict[int, str] = {}
+        self.special_tokens: Dict[str, int] = {
+            "<|sos|>": 0,
+            "<|eos|>": 1,
+            "<|unk|>": 2,
+        }
+        self.char_to_id: Dict[str, int] = {}
+        for token, idx in self.special_tokens.items():
+            self.vocab[idx] = token
 
     def train(self, text: str, max_vocab_size: int, verbose: bool = False) -> None:
-        pre = len(self.vocab)
-        num_merges = max(0, max_vocab_size - pre)
-        ids = list(_str_to_bytes(text))
+        self.merges = {}
+        self.vocab = {idx: tok for tok, idx in self.special_tokens.items()}
+        self.char_to_id = {}
 
-        for i in range(num_merges):
-            stats = self._get_stats(ids)
-            if not stats:
-                break
-            (a, b), count = stats.most_common(1)[0]
-            new_id = len(self.vocab)
-            self.merges[_pair_key(a, b)] = new_id
-            self.vocab[new_id] = self.vocab[a] + self.vocab[b]
-            ids = self._merge_pairs(ids, (a, b), new_id)
-            if verbose and (i + 1) % 500 == 0:
-                print(f"merge {i+1}/{num_merges}: ({a},{b}) -> {new_id} (count={count})")
+        counts: Counter = Counter()
+        for part in self._split_with_specials(text):
+            if part in self.special_tokens:
+                continue
+            for ch in part:
+                counts[ch] += 1
 
-    def _encode_chunk_bpe(self, chunk: str) -> List[int]:
-        # Supports literal special tokens inside a chunk.
-        parts = []
+        max_chars = max(0, max_vocab_size - len(self.special_tokens))
+        most_common = [ch for ch, _ in counts.most_common(max_chars)]
+
+        next_id = len(self.special_tokens)
+        for ch in most_common:
+            self.char_to_id[ch] = next_id
+            self.vocab[next_id] = ch
+            next_id += 1
+
+        if verbose:
+            print(f"built character vocab with {len(self.char_to_id)} chars")
+
+    def _split_with_specials(self, chunk: str) -> List[str]:
         specials = list(self.special_tokens.keys())
-        if specials:
-            special_re = "(" + "|".join(re.escape(s) for s in specials) + ")"
-            parts = [p for p in re.split(special_re, chunk) if p]
-        else:
-            parts = [chunk]
+        if not specials:
+            return [chunk]
+        special_re = "(" + "|".join(re.escape(s) for s in specials) + ")"
+        return [p for p in re.split(special_re, chunk) if p]
 
+    def encode(self, text: str) -> List[int]:
         out: List[int] = []
-        for part in parts:
+        unk = self.special_tokens["<|unk|>"]
+        for part in self._split_with_specials(text):
             if part in self.special_tokens:
                 out.append(self.special_tokens[part])
                 continue
-
-            ids = list(_str_to_bytes(part))
-            while len(ids) >= 2:
-                stats = self._get_stats(ids)
-                # apply earliest merge id (lowest new_id) that exists
-                best_pair = None
-                best_merge = math.inf
-                for (a, b) in stats.keys():
-                    k = _pair_key(a, b)
-                    mid = self.merges.get(k)
-                    if mid is not None and mid < best_merge:
-                        best_merge = mid
-                        best_pair = (a, b)
-                if best_pair is None:
-                    break
-                ids = self._merge_pairs(ids, best_pair, int(best_merge))
-            out.extend(ids)
-        return out
-
-    def encode(self, text: str) -> List[int]:
-        chunks = self.pattern.findall(text) if text else []
-        out: List[int] = []
-        for ch in chunks:
-            out.extend(self._encode_chunk_bpe(ch))
+            for c in part:
+                out.append(self.char_to_id.get(c, unk))
         return out
 
     def decode(self, ids: List[int]) -> str:
-        b = b"".join(self.vocab.get(i, self.vocab[self.special_tokens["<|unk|>"]]) for i in ids)
-        return _bytes_to_str(b)
+        unk = self.special_tokens["<|unk|>"]
+        return "".join(self.vocab.get(i, self.vocab[unk]) for i in ids)
 
     def export_json(self) -> dict:
-        # Store bytes using latin-1 so roundtrips 0-255 values without base64.
-        vocab_out = {str(k): v.decode("latin-1") for k, v in self.vocab.items()}
         return {
+            "tokenizer_type": "character",
             "merges": self.merges,
-            "vocab": vocab_out,
+            "vocab": {str(k): v for k, v in self.vocab.items()},
             "special_tokens": self.special_tokens,
-            "pattern": self.pattern.pattern,
         }
 
     @staticmethod
     def from_export(obj: dict) -> "RegexBPETokenizer":
         t = RegexBPETokenizer()
-        t.merges = {str(k): int(v) for k, v in obj["merges"].items()}
-        t.vocab = {int(k): v.encode("latin-1") for k, v in obj["vocab"].items()}
+        t.merges = {str(k): int(v) for k, v in obj.get("merges", {}).items()}
         t.special_tokens = {str(k): int(v) for k, v in obj["special_tokens"].items()}
-        t.pattern = re.compile(obj.get("pattern") or t.pattern.pattern)
+        t.vocab = {int(k): str(v) for k, v in obj["vocab"].items()}
+        t.char_to_id = {}
+        special_set = set(t.special_tokens.keys())
+        for idx, token in t.vocab.items():
+            if token not in special_set:
+                t.char_to_id[token] = idx
         return t
 
     def save(self, path: str) -> None:

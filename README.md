@@ -7,7 +7,7 @@ Small GPT‑style language model you can train on Shakespeare and run **entirely
 ## Features
 
 - **Tiny GPT**: 2‑layer GPT‑style decoder with 12 attention heads and positional embeddings.
-- **BPE tokenizer**: Regex‑based byte pair encoding, shared between Python and TypeScript.
+- **Character tokenizer**: Character-level tokenization, shared between Python and TypeScript.
 - **Browser inference**: Pure TypeScript forward pass and sampling – no server required.
 - **React UI**: Responsive, single‑page interface with a “Small LLM” playground.
 - **Course labs preserved**: Original Lab 01/02/03 HTML exports wired in as docs.
@@ -21,7 +21,7 @@ Small GPT‑style language model you can train on Shakespeare and run **entirely
 - `llm/` – PyTorch training + export code:
   - `train.py` – train a tiny GPT on `data/shakespeare.txt`
   - `model.py` – GPT config and modules (attention, MLP, blocks)
-  - `tokenizer_bpe.py` – regex+BPE tokenizer with JSON export
+  - `tokenizer_bpe.py` – character-level tokenizer with JSON export
   - `export_web.py` – export weights + tokenizer for the browser
 - `public/models/tiny-gpt/` – exported weights consumed by the web app.
 - `public/Lab_*.html` – static notebook exports from the original course.

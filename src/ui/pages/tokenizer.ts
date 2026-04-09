@@ -6,7 +6,7 @@ export function renderTokenizerPage(container: HTMLElement) {
       <section class="card">
         <div class="cardH">
           <h2>Tokenizer (Lab 01)</h2>
-          <div class="muted">BPE on bytes + regex pre-splitting</div>
+          <div class="muted">Character-level tokenization</div>
         </div>
         <div class="cardB">
           <label for="tokText">Training text</label>
@@ -64,7 +64,7 @@ export function renderTokenizerPage(container: HTMLElement) {
     const vocabSize = Number((container.querySelector("#vocabSize") as HTMLInputElement).value || 400);
     tok.train(text, vocabSize);
     trained = true;
-    setMeta(`trained: vocab=${tok.vocab.size}, merges=${tok.merges.size}`);
+    setMeta(`trained: vocab=${tok.vocab.size}`);
   }
 
   function encode() {

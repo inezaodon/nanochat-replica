@@ -76,9 +76,9 @@ def main():
 
     print(f"[data] tokenizer_chars={len(text_tok):,} train_chars={len(text_train):,} file_chars={len(text_full):,}")
     tok = RegexBPETokenizer()
-    print("[tokenizer] training BPE…")
+    print("[tokenizer] building character vocabulary…")
     tok.train(text_tok, args.vocab_size, verbose=True)
-    print(f"[tokenizer] done. vocab={len(tok.vocab):,} merges={len(tok.merges):,}")
+    print(f"[tokenizer] done. vocab={len(tok.vocab):,}")
     print("[tokenizer] encoding training text…")
     ids = tok.encode(text_train)
     print(f"[tokenizer] encoded tokens={len(ids):,}")
