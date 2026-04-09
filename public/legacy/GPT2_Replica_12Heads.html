@@ -1,0 +1,754 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GPT‑2 Replica (12 Heads)</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b0f17;
+        --panel: #111827;
+        --panel2: #0f172a;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --border: rgba(255, 255, 255, 0.10);
+        --accent: #60a5fa;
+        --danger: #fb7185;
+        --ok: #34d399;
+        --shadow: 0 10px 30px rgba(0,0,0,0.35);
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        background: radial-gradient(1200px 600px at 20% 10%, rgba(96,165,250,0.12), transparent 60%),
+                    radial-gradient(900px 500px at 80% 25%, rgba(52,211,153,0.10), transparent 55%),
+                    var(--bg);
+        color: var(--text);
+      }
+
+      a { color: var(--accent); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+
+      .wrap { max-width: 1200px; margin: 0 auto; padding: 28px 18px 60px; }
+      header {
+        display: grid;
+        gap: 10px;
+        margin-bottom: 18px;
+      }
+      .title {
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+      .subtitle {
+        color: var(--muted);
+        line-height: 1.4;
+      }
+      .pillRow { display: flex; flex-wrap: wrap; gap: 8px; }
+      .pill {
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.04);
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .pill strong { color: var(--text); font-weight: 700; }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 14px;
+        align-items: start;
+      }
+
+      @media (max-width: 980px) {
+        .grid { grid-template-columns: 1fr; }
+      }
+
+      .card {
+        background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .cardHeader {
+        padding: 14px 14px 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 10px;
+        background: rgba(255,255,255,0.02);
+        border-bottom: 1px solid var(--border);
+      }
+      .cardHeader h2 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 800;
+        letter-spacing: 0.01em;
+        text-transform: uppercase;
+        color: rgba(229,231,235,0.92);
+      }
+      .cardHeader .small {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .cardBody { padding: 14px; }
+
+      label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      textarea, input[type="number"], select {
+        width: 100%;
+        border: 1px solid var(--border);
+        background: rgba(15,23,42,0.7);
+        color: var(--text);
+        border-radius: 12px;
+        padding: 10px 12px;
+        outline: none;
+        box-shadow: inset 0 0 0 1px rgba(0,0,0,0.0);
+      }
+      textarea { min-height: 92px; resize: vertical; line-height: 1.35; }
+      textarea:focus, input:focus, select:focus {
+        border-color: rgba(96,165,250,0.6);
+        box-shadow: 0 0 0 4px rgba(96,165,250,0.16);
+      }
+
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      @media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
+
+      .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+      button {
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.06);
+        color: var(--text);
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      button.primary {
+        border-color: rgba(96,165,250,0.55);
+        background: linear-gradient(180deg, rgba(96,165,250,0.30), rgba(96,165,250,0.15));
+      }
+      button:hover { filter: brightness(1.05); }
+      button:active { transform: translateY(1px); }
+
+      .kv {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 8px 12px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .kv div:nth-child(odd) { color: rgba(229,231,235,0.82); font-weight: 700; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+      .tokens {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 10px;
+      }
+      .tok {
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.04);
+        padding: 6px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+      }
+      .tok .id { color: var(--muted); margin-left: 8px; }
+
+      .warn {
+        margin-top: 10px;
+        border: 1px solid rgba(251,113,133,0.35);
+        background: rgba(251,113,133,0.08);
+        border-radius: 12px;
+        padding: 10px 12px;
+        color: rgba(255,255,255,0.88);
+        font-size: 13px;
+        line-height: 1.35;
+      }
+
+      .headsGrid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+      @media (max-width: 980px) { .headsGrid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+      @media (max-width: 520px) { .headsGrid { grid-template-columns: 1fr; } }
+
+      .headCard {
+        border: 1px solid var(--border);
+        background: rgba(15,23,42,0.55);
+        border-radius: 14px;
+        overflow: hidden;
+      }
+      .headTop {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 10px 8px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(255,255,255,0.03);
+      }
+      .headTop .h {
+        font-weight: 800;
+        font-size: 12px;
+        color: rgba(229,231,235,0.92);
+        letter-spacing: 0.02em;
+      }
+      .headTop .shape {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .canvasWrap { padding: 10px; }
+      canvas { width: 100%; height: auto; display: block; border-radius: 10px; }
+      .legend {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .bar {
+        height: 8px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(96,165,250,0.12), rgba(96,165,250,0.55), rgba(52,211,153,0.55));
+        border: 1px solid var(--border);
+      }
+      .links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .links a { border: 1px solid var(--border); padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,0.03); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div class="title">GPT‑2 Replica (12 Attention Heads)</div>
+        <div class="subtitle">
+          A lightweight, browser-only “replica” of the GPT‑2 forward pass components: tokenization → embeddings → <span class="mono">n_layer</span> transformer blocks,
+          each with <strong>12 attention heads</strong>. The attention maps below are computed live in JavaScript (with causal masking).
+        </div>
+        <div class="pillRow">
+          <div class="pill"><strong>n_head</strong> = 12</div>
+          <div class="pill"><strong>d_model</strong> = 48</div>
+          <div class="pill"><strong>head_dim</strong> = 4</div>
+          <div class="pill"><strong>mask</strong> = causal</div>
+        </div>
+      </header>
+
+      <div class="grid">
+        <section class="card">
+          <div class="cardHeader">
+            <h2>Input & Model Controls</h2>
+            <div class="small">Change prompt, layers, and view a layer’s 12 heads.</div>
+          </div>
+          <div class="cardBody">
+            <label for="prompt">Prompt</label>
+            <textarea id="prompt" spellcheck="false">The quick brown fox jumps over the lazy dog.</textarea>
+
+            <div class="row" style="margin-top: 10px;">
+              <div>
+                <label for="nLayer">n_layer (GPT‑2 small uses 12)</label>
+                <input id="nLayer" type="number" min="1" max="48" step="1" value="12" />
+              </div>
+              <div>
+                <label for="layerView">View layer</label>
+                <select id="layerView"></select>
+              </div>
+            </div>
+
+            <div class="row" style="margin-top: 10px;">
+              <div>
+                <label for="maxTokens">Max tokens (for display / compute)</label>
+                <input id="maxTokens" type="number" min="2" max="32" step="1" value="16" />
+              </div>
+              <div>
+                <label for="seed">Random seed</label>
+                <input id="seed" type="number" min="0" max="999999" step="1" value="42" />
+              </div>
+            </div>
+
+            <div class="actions">
+              <button class="primary" id="runBtn">Run forward (demo)</button>
+              <button id="shuffleBtn">New weights (seed++)</button>
+              <button id="resetBtn">Reset prompt</button>
+            </div>
+
+            <div id="summary" style="margin-top: 12px;" class="kv"></div>
+            <div id="tokens" class="tokens" aria-label="Token list"></div>
+
+            <div id="warn" class="warn" style="display: none;"></div>
+
+            <div class="links">
+              <span>Uses your lab pages as reference:</span>
+              <a href="./Lab_01_Tokenization.html">Lab 01</a>
+              <a href="./Lab_02_Embedding.html">Lab 02</a>
+              <a href="./Lab_03_Transformer_Block.html">Lab 03</a>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="cardHeader">
+            <h2>Layer Snapshot</h2>
+            <div class="small">12 heads, each shows \(T \times T\) attention.</div>
+          </div>
+          <div class="cardBody">
+            <div class="legend">
+              <div><strong>Low</strong> (blue-ish)</div>
+              <div style="flex:1; display:flex; align-items:center; gap:10px;">
+                <div class="bar" style="flex:1;"></div>
+              </div>
+              <div><strong>High</strong> (green-ish)</div>
+            </div>
+            <div style="height: 10px;"></div>
+            <div id="heads" class="headsGrid"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <script>
+      // -------------------------
+      // Tiny deterministic RNG
+      // -------------------------
+      function mulberry32(seed) {
+        let a = seed >>> 0;
+        return function () {
+          a |= 0;
+          a = (a + 0x6D2B79F5) | 0;
+          let t = Math.imul(a ^ (a >>> 15), 1 | a);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+      function randn(rng) {
+        // Box-Muller
+        let u = 0, v = 0;
+        while (u === 0) u = rng();
+        while (v === 0) v = rng();
+        return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+      }
+
+      // -------------------------
+      // Demo tokenizer (not GPT-2 BPE)
+      // -------------------------
+      function demoTokenize(text) {
+        // A simple "word/punct" tokenizer for visualization.
+        // Keeps punctuation as its own tokens, collapses whitespace.
+        const parts = text
+          .replace(/\s+/g, " ")
+          .trim()
+          .match(/[A-Za-z0-9]+|[^\sA-Za-z0-9]/g);
+        return parts ? parts : [];
+      }
+
+      function hashTokenToId(tok) {
+        // Stable small int ID for display only.
+        let h = 2166136261;
+        for (let i = 0; i < tok.length; i++) {
+          h ^= tok.charCodeAt(i);
+          h = Math.imul(h, 16777619);
+        }
+        return (h >>> 0) % 50000;
+      }
+
+      // -------------------------
+      // Linear algebra helpers
+      // -------------------------
+      function softmax(vec) {
+        let m = -Infinity;
+        for (const x of vec) if (x > m) m = x;
+        const exps = vec.map((x) => Math.exp(x - m));
+        let s = 0;
+        for (const e of exps) s += e;
+        return exps.map((e) => e / (s || 1));
+      }
+
+      function dot(a, b) {
+        let s = 0;
+        for (let i = 0; i < a.length; i++) s += a[i] * b[i];
+        return s;
+      }
+
+      function matVecMul(W, x) {
+        // W: [out][in], x: [in] -> y: [out]
+        const y = new Array(W.length).fill(0);
+        for (let i = 0; i < W.length; i++) {
+          let s = 0;
+          const row = W[i];
+          for (let j = 0; j < x.length; j++) s += row[j] * x[j];
+          y[i] = s;
+        }
+        return y;
+      }
+
+      function makeWeight(rng, outDim, inDim, scale = 0.02) {
+        const W = new Array(outDim);
+        for (let i = 0; i < outDim; i++) {
+          const row = new Array(inDim);
+          for (let j = 0; j < inDim; j++) row[j] = randn(rng) * scale;
+          W[i] = row;
+        }
+        return W;
+      }
+
+      function addVec(a, b) {
+        const y = new Array(a.length);
+        for (let i = 0; i < a.length; i++) y[i] = a[i] + b[i];
+        return y;
+      }
+
+      function layerNorm(x, eps = 1e-5) {
+        let mean = 0;
+        for (const v of x) mean += v;
+        mean /= x.length || 1;
+        let varSum = 0;
+        for (const v of x) varSum += (v - mean) * (v - mean);
+        const variance = varSum / (x.length || 1);
+        const inv = 1 / Math.sqrt(variance + eps);
+        return x.map((v) => (v - mean) * inv);
+      }
+
+      // -------------------------
+      // GPT-2-ish block (simplified)
+      // - Pre-LN
+      // - MHA with n_head=12
+      // - Residual
+      // (FFN omitted here; focus is "12 attention heads blocks")
+      // -------------------------
+      function attentionHeadsForLayer(rng, dModel, nHead) {
+        const headDim = dModel / nHead;
+        const heads = [];
+        for (let h = 0; h < nHead; h++) {
+          heads.push({
+            Wq: makeWeight(rng, headDim, dModel),
+            Wk: makeWeight(rng, headDim, dModel),
+            Wv: makeWeight(rng, headDim, dModel),
+          });
+        }
+        return heads;
+      }
+
+      function buildModel(seed, nLayer, dModel, nHead) {
+        const rng = mulberry32(seed);
+        const layers = [];
+        for (let l = 0; l < nLayer; l++) {
+          // Each layer gets its own heads weights (demo)
+          layers.push({
+            heads: attentionHeadsForLayer(rng, dModel, nHead),
+          });
+        }
+        return { layers };
+      }
+
+      function computeAttentionMapsForLayer(X, layer, nHead, causal = true) {
+        // X: [T][dModel]
+        const T = X.length;
+        const dModel = X[0]?.length || 0;
+        const headDim = dModel / nHead;
+        const scale = 1 / Math.sqrt(headDim);
+
+        const headMaps = [];
+
+        for (let h = 0; h < nHead; h++) {
+          const { Wq, Wk, Wv } = layer.heads[h];
+
+          // Q,K,V: [T][headDim]
+          const Q = new Array(T);
+          const K = new Array(T);
+          const V = new Array(T);
+          for (let t = 0; t < T; t++) {
+            const xn = layerNorm(X[t]);
+            Q[t] = matVecMul(Wq, xn);
+            K[t] = matVecMul(Wk, xn);
+            V[t] = matVecMul(Wv, xn);
+          }
+
+          // attn weights: [T][T]
+          const A = new Array(T);
+          for (let i = 0; i < T; i++) {
+            const logits = new Array(T);
+            for (let j = 0; j < T; j++) {
+              const masked = causal && j > i;
+              logits[j] = masked ? -1e9 : dot(Q[i], K[j]) * scale;
+            }
+            A[i] = softmax(logits);
+          }
+
+          // output for this head: O = A * V (not used in UI; computed to mirror "forward")
+          const O = new Array(T);
+          for (let i = 0; i < T; i++) {
+            const out = new Array(headDim).fill(0);
+            for (let j = 0; j < T; j++) {
+              const aij = A[i][j];
+              const vj = V[j];
+              for (let k = 0; k < headDim; k++) out[k] += aij * vj[k];
+            }
+            O[i] = out;
+          }
+
+          headMaps.push({ A, O });
+        }
+        return headMaps;
+      }
+
+      // -------------------------
+      // Rendering
+      // -------------------------
+      function lerp(a, b, t) { return a + (b - a) * t; }
+      function clamp01(x) { return Math.max(0, Math.min(1, x)); }
+
+      function heatColor(v) {
+        // v in [0,1]
+        // blue -> accent -> green
+        const t = clamp01(v);
+        const c1 = [96, 165, 250]; // accent-ish
+        const c0 = [30, 41, 59];   // slate
+        const c2 = [52, 211, 153]; // green
+        const mid = 0.5;
+        let r,g,b;
+        if (t < mid) {
+          const u = t / mid;
+          r = lerp(c0[0], c1[0], u);
+          g = lerp(c0[1], c1[1], u);
+          b = lerp(c0[2], c1[2], u);
+        } else {
+          const u = (t - mid) / (1 - mid);
+          r = lerp(c1[0], c2[0], u);
+          g = lerp(c1[1], c2[1], u);
+          b = lerp(c1[2], c2[2], u);
+        }
+        return `rgb(${r|0},${g|0},${b|0})`;
+      }
+
+      function drawHeatmap(canvas, A, tokens) {
+        const ctx = canvas.getContext("2d");
+        const T = A.length;
+        const pad = 26;
+        const cell = 16;
+        const w = pad + T * cell + 8;
+        const h = pad + T * cell + 8;
+        canvas.width = Math.max(180, w);
+        canvas.height = Math.max(180, h);
+
+        // background
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "rgba(15,23,42,0.25)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // cells
+        for (let i = 0; i < T; i++) {
+          for (let j = 0; j < T; j++) {
+            const v = A[i][j];
+            ctx.fillStyle = heatColor(v);
+            ctx.fillRect(pad + j * cell, pad + i * cell, cell - 1, cell - 1);
+          }
+        }
+
+        // axes labels (token indices)
+        ctx.font = "10px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace";
+        ctx.fillStyle = "rgba(229,231,235,0.7)";
+        for (let t = 0; t < T; t++) {
+          const x = pad + t * cell + 3;
+          const y = 18;
+          ctx.fillText(String(t), x, y);
+          ctx.fillText(String(t), 8, pad + t * cell + 12);
+        }
+
+        // subtle border
+        ctx.strokeStyle = "rgba(255,255,255,0.10)";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(pad - 1, pad - 1, T * cell + 1, T * cell + 1);
+
+        // tooltip-ish token hint (first few)
+        const hint = tokens.slice(0, 5).join(" ");
+        ctx.fillStyle = "rgba(229,231,235,0.55)";
+        ctx.fillText(hint.length ? hint : "(no tokens)", pad, canvas.height - 10);
+      }
+
+      function el(id) { return document.getElementById(id); }
+
+      const DEFAULT_PROMPT = "The quick brown fox jumps over the lazy dog.";
+      const N_HEAD = 12;
+      const D_MODEL = 48;
+
+      function setWarn(msg) {
+        const w = el("warn");
+        if (!msg) { w.style.display = "none"; w.textContent = ""; return; }
+        w.style.display = "block";
+        w.textContent = msg;
+      }
+
+      function updateLayerSelect(nLayer) {
+        const sel = el("layerView");
+        const prev = sel.value;
+        sel.innerHTML = "";
+        for (let i = 0; i < nLayer; i++) {
+          const opt = document.createElement("option");
+          opt.value = String(i);
+          opt.textContent = `Layer ${i + 1} / ${nLayer}`;
+          sel.appendChild(opt);
+        }
+        if (prev && Number(prev) < nLayer) sel.value = prev;
+      }
+
+      function renderTokens(tokens) {
+        const cont = el("tokens");
+        cont.innerHTML = "";
+        for (const tok of tokens) {
+          const span = document.createElement("div");
+          span.className = "tok";
+          const id = hashTokenToId(tok);
+          span.innerHTML = `<span class="mono">${escapeHtml(tok)}</span><span class="id mono">#${id}</span>`;
+          cont.appendChild(span);
+        }
+      }
+
+      function escapeHtml(s) {
+        return s
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function renderSummary({ tokens, nLayer, seed, T }) {
+        const headDim = D_MODEL / N_HEAD;
+        const summary = el("summary");
+        summary.innerHTML = "";
+        const items = [
+          ["tokens", `${tokens.length} (using first ${T})`],
+          ["n_layer", String(nLayer)],
+          ["n_head", String(N_HEAD)],
+          ["d_model", String(D_MODEL)],
+          ["head_dim", String(headDim)],
+          ["causal_mask", "on"],
+          ["seed", String(seed)],
+        ];
+        for (const [k, v] of items) {
+          const kEl = document.createElement("div");
+          kEl.className = "mono";
+          kEl.textContent = k;
+          const vEl = document.createElement("div");
+          vEl.className = "mono";
+          vEl.textContent = v;
+          summary.appendChild(kEl);
+          summary.appendChild(vEl);
+        }
+      }
+
+      function renderHeads(headMaps, tokens) {
+        const heads = el("heads");
+        heads.innerHTML = "";
+        for (let h = 0; h < headMaps.length; h++) {
+          const card = document.createElement("div");
+          card.className = "headCard";
+          const top = document.createElement("div");
+          top.className = "headTop";
+          const T = headMaps[h].A.length;
+          top.innerHTML = `<div class="h">Head ${h + 1}</div><div class="shape mono">A: ${T}×${T}</div>`;
+          const body = document.createElement("div");
+          body.className = "canvasWrap";
+          const canvas = document.createElement("canvas");
+          body.appendChild(canvas);
+          card.appendChild(top);
+          card.appendChild(body);
+          heads.appendChild(card);
+          drawHeatmap(canvas, headMaps[h].A, tokens);
+        }
+      }
+
+      // -------------------------
+      // Main
+      // -------------------------
+      function run() {
+        const prompt = el("prompt").value || "";
+        const nLayer = Math.max(1, Math.min(48, Number(el("nLayer").value || 12)));
+        const maxTokens = Math.max(2, Math.min(32, Number(el("maxTokens").value || 16)));
+        const seed = Math.max(0, Math.min(999999, Number(el("seed").value || 42)));
+        el("nLayer").value = String(nLayer);
+        el("maxTokens").value = String(maxTokens);
+        el("seed").value = String(seed);
+
+        updateLayerSelect(nLayer);
+
+        const tokensAll = demoTokenize(prompt);
+        const tokens = tokensAll.slice(0, maxTokens);
+
+        if (tokens.length < 2) {
+          setWarn("Add a longer prompt so we have at least 2 tokens to visualize attention.");
+        } else {
+          setWarn("");
+        }
+
+        renderTokens(tokensAll);
+        renderSummary({ tokens: tokensAll, nLayer, seed, T: tokens.length });
+
+        // Build random "token embeddings" X: [T][dModel]
+        const rng = mulberry32(seed ^ 0xA5A5A5A5);
+        const X = tokens.map(() => {
+          const v = new Array(D_MODEL);
+          for (let i = 0; i < D_MODEL; i++) v[i] = randn(rng);
+          return v;
+        });
+
+        // Build model weights (deterministic for seed)
+        const model = buildModel(seed, nLayer, D_MODEL, N_HEAD);
+
+        const layerIdx = Math.max(0, Math.min(nLayer - 1, Number(el("layerView").value || 0)));
+        el("layerView").value = String(layerIdx);
+
+        const headMaps = computeAttentionMapsForLayer(X, model.layers[layerIdx], N_HEAD, true);
+        renderHeads(headMaps, tokens);
+      }
+
+      function attach() {
+        updateLayerSelect(Number(el("nLayer").value || 12));
+
+        el("runBtn").addEventListener("click", run);
+        el("shuffleBtn").addEventListener("click", () => {
+          el("seed").value = String(Number(el("seed").value || 0) + 1);
+          run();
+        });
+        el("resetBtn").addEventListener("click", () => {
+          el("prompt").value = DEFAULT_PROMPT;
+          el("nLayer").value = "12";
+          el("maxTokens").value = "16";
+          el("seed").value = "42";
+          updateLayerSelect(12);
+          run();
+        });
+
+        el("nLayer").addEventListener("change", () => { updateLayerSelect(Number(el("nLayer").value || 12)); run(); });
+        el("layerView").addEventListener("change", run);
+        el("maxTokens").addEventListener("change", run);
+        el("seed").addEventListener("change", run);
+
+        run();
+      }
+
+      attach();
+    </script>
+  </body>
+</html>
+

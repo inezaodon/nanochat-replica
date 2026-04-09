@@ -1,0 +1,33 @@
+{
+  "name": "nanochat-replica",
+  "version": "1.0.0",
+  "description": "In the era infused with AI, reading text is one of the best things computers can do. I am embarking on this project to learn and understand how the concepts behind LLMs work.",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:github": "vite build --mode github",
+    "preview": "vite preview",
+    "lint": "eslint ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/inezaodon/nanochat-replica.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/inezaodon/nanochat-replica/issues"
+  },
+  "homepage": "https://github.com/inezaodon/nanochat-replica#readme",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^25.5.2",
+    "eslint": "^10.2.0",
+    "typescript": "^6.0.2",
+    "typescript-eslint": "^8.58.1",
+    "vite": "^8.0.8"
+  }
+}
