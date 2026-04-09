@@ -13,6 +13,7 @@ export function LLMPlayground() {
   const [temperature, setTemperature] = useState(0.9);
   const [topK, setTopK] = useState(40);
   const [seed, setSeed] = useState(42);
+  const [showDiagramFallback, setShowDiagramFallback] = useState(false);
 
   const help = useMemo(
     () => [
@@ -129,12 +130,34 @@ export function LLMPlayground() {
           <div className="muted">Under the hood</div>
         </div>
         <div className="cardB">
+          <p className="muted" style={{ marginTop: 0, marginBottom: 12 }}>
+            Each generated token is sampled from logits produced by a forward pass over the current context, then appended
+            to the prompt and repeated.
+          </p>
           <div style={{ marginBottom: 12 }}>
-            <img
-              src="https://jalammar.github.io/images/t/transformer_decoding_3.gif"
-              alt="Illustration of a transformer decoding tokens"
-              style={{ width: "100%", borderRadius: 12, border: "1px solid rgba(148,163,184,.4)" }}
-            />
+            {!showDiagramFallback ? (
+              <img
+                src="https://jalammar.github.io/images/t/transformer_decoding_3.gif"
+                alt="Illustration of a transformer decoding tokens"
+                style={{ width: "100%", borderRadius: 12, border: "1px solid rgba(148,163,184,.4)" }}
+                onError={() => setShowDiagramFallback(true)}
+              />
+            ) : (
+              <div
+                className="mono"
+                style={{
+                  border: "1px solid rgba(148,163,184,.4)",
+                  borderRadius: 12,
+                  padding: 12,
+                  lineHeight: 1.5,
+                  background: "rgba(15,23,42,.45)",
+                  fontSize: 12,
+                }}
+              >
+                prompt -> tokenizer -> token IDs -> transformer forward pass -> logits -> top-k/temperature sampling ->
+                next token -> repeat
+              </div>
+            )}
           </div>
           <ul style={{ fontSize: 13 }}>
             <li>
