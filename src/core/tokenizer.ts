@@ -214,5 +214,54 @@ export class RegexBPETokenizer {
   decode(ids: number[]): string {
     return this.bpe.decode(ids);
   }
+
+  toJSON(): {
+    merges: Record<string, number>;
+    vocab: Record<string, string>;
+    special_tokens: Record<string, number>;
+    pattern: string;
+  } {
+    const merges: Record<string, number> = {};
+    for (const [k, v] of this.bpe.merges.entries()) merges[k] = v;
+
+    const vocab: Record<string, string> = {};
+    for (const [id, bytes] of this.bpe.vocab.entries()) {
+      // latin-1 string roundtrips bytes 0-255 (matches Python export).
+      let s = "";
+      for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+      vocab[String(id)] = s;
+    }
+
+    const special_tokens: Record<string, number> = {};
+    for (const [k, v] of this.bpe.specialTokens.entries()) special_tokens[k] = v;
+
+    return { merges, vocab, special_tokens, pattern: this.pattern.source };
+  }
+
+  static fromJSON(obj: {
+    merges: Record<string, number>;
+    vocab: Record<string, string>;
+    special_tokens: Record<string, number>;
+    pattern?: string;
+  }): RegexBPETokenizer {
+    const t = new RegexBPETokenizer();
+    t.bpe.merges = new Map(Object.entries(obj.merges) as Array<[MergePair, number]>);
+    t.bpe.specialTokens = new Map(Object.entries(obj.special_tokens));
+    const inv = new Map<number, string>();
+    for (const [k, v] of t.bpe.specialTokens.entries()) inv.set(v, k);
+    // @ts-expect-error private field set during load
+    t.bpe.inverseSpecialTokens = inv;
+
+    t.bpe.vocab = new Map();
+    for (const [idStr, s] of Object.entries(obj.vocab)) {
+      const id = Number(idStr);
+      const bytes = new Uint8Array(s.length);
+      for (let i = 0; i < s.length; i++) bytes[i] = s.charCodeAt(i) & 0xff;
+      t.bpe.vocab.set(id, bytes);
+    }
+
+    if (obj.pattern) t.pattern = new RegExp(obj.pattern, "g");
+    return t;
+  }
 }
 
