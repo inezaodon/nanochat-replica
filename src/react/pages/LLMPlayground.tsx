@@ -67,7 +67,7 @@ export function LLMPlayground() {
       <section className="card">
         <div className="cardH">
           <h2>Small LLM</h2>
-          <div className="muted">React UI (responsive)</div>
+          <div className="muted">Interact with the tiny GPT</div>
         </div>
         <div className="cardB">
           <label>Prompt</label>
@@ -125,11 +125,42 @@ export function LLMPlayground() {
 
       <section className="card">
         <div className="cardH">
-          <h2>How to train</h2>
-          <div className="muted">GPU supported</div>
+          <h2>How it works</h2>
+          <div className="muted">Under the hood</div>
         </div>
         <div className="cardB">
-          <div className="mono">{help.map((x) => <div key={x}>{x}</div>)}</div>
+          <div style={{ marginBottom: 12 }}>
+            <img
+              src="https://jalammar.github.io/images/t/transformer_decoding_3.gif"
+              alt="Illustration of a transformer decoding tokens"
+              style={{ width: "100%", borderRadius: 12, border: "1px solid rgba(148,163,184,.4)" }}
+            />
+          </div>
+          <ul style={{ fontSize: 13 }}>
+            <li>
+              <strong>Context window</strong>: last {maxNewTokens} tokens within a block of 128 positions.
+            </li>
+            <li>
+              <strong>Generation controls</strong>: adjust temperature and top‑k to explore different creative modes.
+            </li>
+            <li>
+              <strong>Determinism</strong>: set a fixed seed to reproduce the same outputs for demos.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="cardH">
+          <h2>How to retrain</h2>
+          <div className="muted">GPU friendly</div>
+        </div>
+        <div className="cardB">
+          <div className="mono">
+            {help.map((x) => (
+              <div key={x}>{x}</div>
+            ))}
+          </div>
         </div>
       </section>
     </div>
