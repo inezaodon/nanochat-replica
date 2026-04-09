@@ -153,10 +153,7 @@ export function LLMPlayground() {
                   background: "rgba(15,23,42,.45)",
                   fontSize: 12,
                 }}
-              >
-                prompt -> tokenizer -> token IDs -> transformer forward pass -> logits -> top-k/temperature sampling ->
-                next token -> repeat
-              </div>
+              >{"prompt -> tokenizer -> token IDs -> transformer forward pass -> logits -> top-k/temperature sampling -> next token -> repeat"}</div>
             )}
           </div>
           <ul style={{ fontSize: 13 }}>
