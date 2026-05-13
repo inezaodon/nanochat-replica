@@ -8,7 +8,8 @@
     "build": "vite build",
     "build:github": "vite build --mode github",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "prepare:gpt2-web": "python -m llm.prepare_course_model --out_dir public/models/gpt2-small"
   },
   "repository": {
     "type": "git",

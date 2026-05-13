@@ -44,8 +44,8 @@ export function ExamFactsSlider() {
           Course study facts
         </h2>
         <p className="exam-slider__subtitle muted">
-          Short ideas from the Building ChatGPT practice answer keys—aligned with tokenizer, transformer, and training
-          topics in this project.
+          Numbered items from the Exam 01 and Practice Packet 02 answer keys (auto-extracted text). Use prev/next or jump
+          by index when the list is long.
         </p>
       </div>
 
@@ -77,27 +77,44 @@ export function ExamFactsSlider() {
           </button>
         </div>
 
-        <div className="exam-slider__dots" role="tablist" aria-label="Jump to a fact">
-          {facts.map((f, i) => {
-            const selected = i === index;
-            return (
-              <button
-                key={f.id}
-                type="button"
-                role="tab"
-                aria-selected={selected}
-                tabIndex={0}
-                aria-controls={panelId}
-                className={`exam-slider__dot${selected ? " exam-slider__dot--active" : ""}`}
-                onClick={() => goTo(i)}
-              >
-                <span className="exam-slider__visually-hidden">
-                  Fact {i + 1}: {f.sourceLabel}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        {count <= 48 ? (
+          <div className="exam-slider__dots" role="tablist" aria-label="Jump to a fact">
+            {facts.map((f, i) => {
+              const selected = i === index;
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  tabIndex={0}
+                  aria-controls={panelId}
+                  className={`exam-slider__dot${selected ? " exam-slider__dot--active" : ""}`}
+                  onClick={() => goTo(i)}
+                >
+                  <span className="exam-slider__visually-hidden">
+                    Fact {i + 1}: {f.sourceLabel}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="exam-slider__jump">
+            <label className="exam-slider__jump-label muted" htmlFor="exam-fact-index">
+              Jump to fact ({index + 1} / {count})
+            </label>
+            <input
+              id="exam-fact-index"
+              className="exam-slider__jump-range"
+              type="range"
+              min={1}
+              max={count}
+              value={index + 1}
+              onChange={(e) => goTo(Number(e.target.value) - 1)}
+            />
+          </div>
+        )}
       </div>
     </section>
   );

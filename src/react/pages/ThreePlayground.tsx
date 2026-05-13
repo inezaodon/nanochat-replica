@@ -14,7 +14,7 @@ export function ThreePlayground() {
     if (!mount) return;
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0xf4f4f5, 0.032);
+    scene.fog = new THREE.FogExp2(0xf4f4f5, 0.028);
 
     const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 120);
     camera.position.set(0, 0.4, 5.2);
@@ -61,10 +61,10 @@ export function ThreePlayground() {
 
     const wireGeo = new THREE.IcosahedronGeometry(2.15, 2);
     const wireMat = new THREE.MeshBasicMaterial({
-      color: 0xfb923c,
+      color: 0xea580c,
       wireframe: true,
       transparent: true,
-      opacity: 0.22,
+      opacity: 0.3,
     });
     const wire = new THREE.Mesh(wireGeo, wireMat);
     scene.add(wire);
@@ -158,14 +158,97 @@ export function ThreePlayground() {
   }, []);
 
   return (
-    <div className="stack-gap">
-      <section className="card">
+    <div className="stack-gap three-page">
+      <section className="card three-teach">
         <div className="cardH">
           <h2>Three.js lab</h2>
-          <div className="cardH-meta">Orbit with pointer · ACES tone map · physical + iridescent material</div>
+          <div className="cardH-meta">WebGL + orbit controls — read the cards, then explore the scene.</div>
+        </div>
+        <div className="cardB three-teach-grid">
+          <div>
+            <h3 className="three-teach-subhead">What you are seeing</h3>
+            <ul className="how-list mb-0">
+              <li>
+                <strong>Camera</strong> — a perspective camera; nothing here is “trained”: it is a fixed lens into a
+                small synthetic world.
+              </li>
+              <li>
+                <strong>Orbit controls</strong> — you move the camera around a target; the geometry stays in place while
+                your viewpoint changes (useful analogy: different “readings” of the same state).
+              </li>
+              <li>
+                <strong>Torus knot (solid mesh)</strong> — a smooth, closed curve embedded in 3D. Think of it as a
+                playful stand-in for a <em>latent trajectory</em>: a path in space, not a claim about exact model
+                geometry.
+              </li>
+              <li>
+                <strong>Wireframe icosahedron</strong> — shows connectivity and empty space between edges. High-level
+                metaphor only: many relationships in a model are sparse or structured, not a literal cage around data.
+              </li>
+              <li>
+                <strong>Particle starfield</strong> — many independent points in space; a loose visual for “many
+                positions / many items,” not a literal embedding cloud.
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="three-teach-subhead">Controls legend</h3>
+            <ul className="how-list mb-0">
+              <li>
+                <strong>Drag (primary mouse button)</strong> — orbit: rotate the camera around the focal point.
+              </li>
+              <li>
+                <strong>Scroll / trackpad pinch</strong> — zoom in and out between the configured min and max
+                distance.
+              </li>
+              <li>
+                <strong>Right-drag (where supported)</strong> — pan (small translations of the view target).
+              </li>
+              <li>
+                <strong>Keyboard</strong> — not wired in this demo; all navigation is pointer-based.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="cardH">
+          <h2>Scene</h2>
+          <div className="cardH-meta">ACES tone map · physical + iridescent material · soft shadows</div>
         </div>
         <div className="cardB" style={{ padding: 0 }}>
           <div ref={mountRef} className="three-stage" role="img" aria-label="Interactive 3D torus knot and starfield" />
+        </div>
+      </section>
+
+      <section className="card three-teach">
+        <div className="cardH">
+          <h2>Three.js and transforms in ML</h2>
+          <div className="cardH-meta">Honest parallels — math is shared, domains differ.</div>
+        </div>
+        <div className="cardB">
+          <ul className="how-list mb-0">
+            <li>
+              <strong>Sequences as positions</strong> — a list of token vectors is a discrete path through a
+              high-dimensional space; transformers update each position based on others, somewhat like local rules on
+              a mesh, but in many dimensions and with learned weights.
+            </li>
+            <li>
+              <strong>Attention as relational mixing</strong> — attention scores say how much each position should
+              listen to each other position; it is not Euclidean distance in this scene, but the <em>idea</em> of
+              pairwise influence is related.
+            </li>
+            <li>
+              <strong>Matrices everywhere</strong> — Three.js uses matrices for rigid transforms; neural nets use
+              matrices for linear maps inside layers. Same linear-algebra tools, different objects.
+            </li>
+            <li>
+              <strong>Why 3D then?</strong> — humans parse spatial layouts quickly; this page is for building geometric
+              intuition and comfort with cameras, coordinates, and motion — not for claiming the LLM’s latent space is
+              three-dimensional.
+            </li>
+          </ul>
         </div>
       </section>
 

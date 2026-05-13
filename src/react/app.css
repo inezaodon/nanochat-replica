@@ -510,11 +510,35 @@ button.primary:hover:not(:disabled) {
 .labs-course-stack {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 0;
 }
 
 .lab-group {
+  padding: 18px 0 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.lab-group:first-child {
   padding-top: 4px;
+}
+
+.lab-group:last-child {
+  border-bottom: none;
+  padding-bottom: 4px;
+}
+
+.lab-group--other {
+  margin-top: 8px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border-strong);
+  border-bottom: none;
+}
+
+@media (max-width: 520px) {
+  .lab-group {
+    padding-left: 0;
+    padding-right: 0;
+  }
 }
 
 .lab-group-title {
@@ -804,4 +828,53 @@ button.primary:hover:not(:disabled) {
 .exam-slider__dot:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.exam-slider__jump {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.exam-slider__jump-label {
+  font-size: 13px;
+}
+
+.exam-slider__jump-range {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.status-actions .primary {
+  font-size: 13px;
+  padding: 8px 14px;
+}
+
+.three-teach-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 28px;
+}
+
+@media (max-width: 720px) {
+  .three-teach-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.three-teach-subhead {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text);
 }
