@@ -5,3 +5,11 @@ dist/
 
 .venv/
 
+# ND / course release checkpoints (large .pt files)
+weights/
+
+# Course data downloads (large / reproducible via fetch script)
+data/course/openweb10k.txt
+# Large generated corpora (rebuild with python -m llm.expand_corpus)
+data/corpus_expanded.txt
+

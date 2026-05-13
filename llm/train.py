@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import platform
 from dataclasses import asdict
 from pathlib import Path
 
@@ -34,9 +35,35 @@ def get_device(name: str) -> torch.device:
     return torch.device("cpu")
 
 
+def load_training_text(data_arg: str) -> tuple[str, list[str]]:
+    """
+    Load UTF-8 training text from one or more files.
+    `--data` may be a single path or comma-separated paths, concatenated in order
+    with a newline between files.
+    """
+    parts = [p.strip() for p in data_arg.split(",") if p.strip()]
+    if not parts:
+        raise ValueError("--data must name at least one text file.")
+    chunks: list[str] = []
+    labels: list[str] = []
+    for p in parts:
+        path = Path(p)
+        if not path.is_file():
+            raise FileNotFoundError(f"Training data file not found: {path}")
+        chunks.append(path.read_text(encoding="utf-8"))
+        labels.append(str(path))
+    text = "\n\n".join(chunks)
+    return text, labels
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--data", type=str, default="data/shakespeare.txt")
+    ap.add_argument(
+        "--data",
+        type=str,
+        default="data/training_corpus.txt",
+        help="UTF-8 text file(s), comma-separated; concatenated in order (default: multi-source corpus in repo).",
+    )
     ap.add_argument("--out_dir", type=str, default="checkpoints/tiny-gpt")
     ap.add_argument("--vocab_size", type=int, default=4096)
     ap.add_argument(
@@ -62,6 +89,17 @@ def main():
     ap.add_argument("--eval_every", type=int, default=200)
     ap.add_argument("--device", type=str, default="cuda", choices=["cuda", "mps", "cpu"])
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument(
+        "--num_workers",
+        type=int,
+        default=0,
+        help="DataLoader worker processes (0 = main process only). Try 4 on Linux/macOS for faster batching.",
+    )
+    ap.add_argument(
+        "--compile",
+        action="store_true",
+        help="Wrap model in torch.compile (CUDA only; PyTorch 2+).",
+    )
     args = ap.parse_args()
 
     torch.manual_seed(args.seed)
@@ -70,7 +108,8 @@ def main():
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    text_full = Path(args.data).read_text(encoding="utf-8")
+    text_full, sources = load_training_text(args.data)
+    print(f"[data] sources: {sources}")
     text_tok = text_full if args.tokenizer_chars == 0 else text_full[: args.tokenizer_chars]
     text_train = text_full if args.train_chars == 0 else text_full[: args.train_chars]
 
@@ -98,10 +137,19 @@ def main():
         raise ValueError("n_embd must be divisible by n_head")
 
     model = GPT(cfg).to(device)
+    if args.compile:
+        if device.type != "cuda":
+            raise ValueError("--compile is only supported with CUDA in this repo.")
+        model = torch.compile(model)  # type: ignore[assignment]
     opt = torch.optim.AdamW(model.parameters(), lr=args.lr)
 
     ds = TokenDataset(ids, cfg.block_size)
-    dl = DataLoader(ds, batch_size=args.batch_size, shuffle=True, drop_last=True)
+    pin = device.type == "cuda"
+    nw = max(0, args.num_workers)
+    dl_kw = dict(batch_size=args.batch_size, shuffle=True, drop_last=True, pin_memory=pin, num_workers=nw)
+    if nw > 0 and platform.system() != "Windows":
+        dl_kw["persistent_workers"] = True
+    dl = DataLoader(ds, **dl_kw)
     it = iter(dl)
 
     model.train()
@@ -112,8 +160,9 @@ def main():
         except StopIteration:
             it = iter(dl)
             x, y = next(it)
-        x = x.to(device)
-        y = y.to(device)
+        nb = pin and device.type == "cuda"
+        x = x.to(device, non_blocking=nb)
+        y = y.to(device, non_blocking=nb)
 
         _, loss = model(x, y)
         opt.zero_grad(set_to_none=True)

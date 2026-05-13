@@ -1,13 +1,18 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Gpt2TiktokenTokenizer } from "../../core/gpt2Tokenizer";
 import { RegexBPETokenizer } from "../../core/tokenizer";
 import { createTinyGPTWeb, loadTensors, TinyGPTWeb } from "../../core/inferTinyGPT";
 import { fetchArrayBuffer, fetchJSON, WebManifest } from "../../core/webModel";
 
+type ModelPreset = "tiny-gpt" | "gpt2-small";
+
 export function LLMPlayground() {
+  const [preset, setPreset] = useState<ModelPreset>("tiny-gpt");
   const [prompt, setPrompt] = useState("Hello from a tiny GPT.");
   const [status, setStatus] = useState<string>("Model not loaded yet.");
   const [out, setOut] = useState<string>("");
   const [model, setModel] = useState<TinyGPTWeb | null>(null);
+  const gpt2TokenizerRef = useRef<Gpt2TiktokenTokenizer | null>(null);
   const [loading, setLoading] = useState(false);
   const [maxNewTokens, setMaxNewTokens] = useState(60);
   const [temperature, setTemperature] = useState(0.9);
@@ -17,32 +22,54 @@ export function LLMPlayground() {
 
   const help = useMemo(
     () => [
-      "1) Install deps: pip install -r requirements.txt",
-      "2) Train: python -m llm.train --data data/shakespeare.txt --device cuda (or mps/cpu)",
-      "3) Export: python -m llm.export_web --ckpt checkpoints/tiny-gpt/model.pt --tokenizer checkpoints/tiny-gpt/tokenizer.json --out_dir public/models/tiny-gpt",
-      "4) Run web: npm run dev (then Load model below)",
+      "1) Install deps: pip install -r requirements.txt && npm install",
+      "2) Tiny model — train: python -m llm.train --data data/training_corpus.txt --device cpu",
+      "2b) Bigger corpus: python -m llm.expand_corpus --out data/corpus_expanded.txt --include-local data/training_corpus.txt --hf-preset wikitext-103 ag_news",
+      "3) Tiny model — export: python -m llm.export_web --ckpt checkpoints/tiny-gpt/model.pt --tokenizer checkpoints/tiny-gpt/tokenizer.json --out_dir public/models/tiny-gpt",
+      "4) ND GPT-2 release — download + export: python -m llm.prepare_course_model --out_dir public/models/gpt2-small",
+      "5) Run web: npm run dev (pick preset, then Load model)",
     ],
     [],
   );
 
+  useEffect(() => {
+    return () => {
+      gpt2TokenizerRef.current?.free();
+      gpt2TokenizerRef.current = null;
+    };
+  }, []);
+
   async function loadModel() {
     setLoading(true);
     setStatus("Loading manifest/tokenizer/weights…");
+    gpt2TokenizerRef.current?.free();
+    gpt2TokenizerRef.current = null;
     try {
-      const manifest = await fetchJSON<WebManifest>("/models/tiny-gpt/manifest.json");
+      const base = preset === "tiny-gpt" ? "/models/tiny-gpt" : "/models/gpt2-small";
+      const manifest = await fetchJSON<WebManifest>(`${base}/manifest.json`);
       const tokObj = await fetchJSON<{
-        merges: Record<string, number>;
+        tokenizer_type?: string;
+        merges?: Record<string, number>;
         vocab: Record<string, string>;
         special_tokens: Record<string, number>;
         pattern?: string;
-      }>("/models/tiny-gpt/tokenizer.json");
-      const tokenizer = RegexBPETokenizer.fromJSON(tokObj);
-      const buf = await fetchArrayBuffer(`/models/tiny-gpt/${manifest.weights}`);
+      }>(`${base}/tokenizer.json`);
+
+      let tokenizer: RegexBPETokenizer | Gpt2TiktokenTokenizer;
+      if (tokObj.tokenizer_type === "gpt2_tiktoken" || manifest.tokenizer_type === "gpt2_tiktoken") {
+        const g2 = new Gpt2TiktokenTokenizer();
+        gpt2TokenizerRef.current = g2;
+        tokenizer = g2;
+      } else {
+        tokenizer = RegexBPETokenizer.fromJSON(tokObj);
+      }
+
+      const buf = await fetchArrayBuffer(`${base}/${manifest.weights}`);
       const tensors = loadTensors(buf, manifest);
       const m = createTinyGPTWeb(manifest, tokenizer, tensors);
       setModel(m);
       setStatus(
-        `Loaded tiny-gpt: vocab=${manifest.config.vocab_size}, layers=${manifest.config.n_layer}, heads=${manifest.config.n_head}, embd=${manifest.config.n_embd}`,
+        `Loaded ${preset}: vocab=${manifest.config.vocab_size}, layers=${manifest.config.n_layer}, heads=${manifest.config.n_head}, embd=${manifest.config.n_embd}`,
       );
     } catch (e) {
       setStatus((e as Error).message);
@@ -80,7 +107,7 @@ export function LLMPlayground() {
                 type="number"
                 value={maxNewTokens}
                 min={1}
-                max={256}
+                max={512}
                 onChange={(e) => setMaxNewTokens(Number(e.target.value))}
               />
             </div>
@@ -105,6 +132,17 @@ export function LLMPlayground() {
               <label>Top‑K</label>
               <input type="number" value={topK} min={0} max={200} onChange={(e) => setTopK(Number(e.target.value))} />
             </div>
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <label>Model bundle</label>
+            <select
+              value={preset}
+              onChange={(e) => setPreset(e.target.value as ModelPreset)}
+              style={{ marginLeft: 8 }}
+            >
+              <option value="tiny-gpt">tiny-gpt (trained in-repo)</option>
+              <option value="gpt2-small">gpt2-small (ND weights-v1 release, run prepare_course_model)</option>
+            </select>
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
             <button className="primary" disabled={loading} onClick={generate}>
@@ -158,7 +196,8 @@ export function LLMPlayground() {
           </div>
           <ul style={{ fontSize: 13 }}>
             <li>
-              <strong>Context window</strong>: last {maxNewTokens} tokens within a block of 128 positions.
+              <strong>Context window</strong>: last {maxNewTokens} new tokens; model context is the bundle&apos;s{" "}
+              <span className="mono">block_size</span> (128 for tiny-gpt, 1024 for gpt2-small).
             </li>
             <li>
               <strong>Generation controls</strong>: adjust temperature and top‑k to explore different creative modes.

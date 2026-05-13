@@ -16,6 +16,10 @@ export type WebManifest = {
     n_embd: number;
     dropout: number;
   };
+  /** When set (e.g. ND GPT-2 bundle), browser uses this id for early stop instead of <|eos|>. */
+  eos_token_id?: number;
+  /** "gpt2_tiktoken" for course / Hub-style GPT-2 BPE; omit for character-level tokenizer. */
+  tokenizer_type?: string;
 };
 
 export async function fetchJSON<T>(url: string): Promise<T> {

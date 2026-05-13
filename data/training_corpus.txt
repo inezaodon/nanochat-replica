@@ -1,0 +1,75 @@
+Default training mix for nanochat-replica (not Shakespeare-only).
+Sections are plain text.
+
+=== Jabberwocky (Lewis Carroll, public domain) ===
+
+’Twas brillig, and the slithy toves
+Did gyre and gimble in the wabe;
+All mimsy were the borogoves,
+And the mome raths outgrabe.
+
+“Beware the Jabberwock, my son!
+The jaws that bite, the claws that catch!
+Beware the Jubjub bird, and shun
+The frumious Bandersnatch!”
+
+He took his vorpal sword in hand:
+Long time the manxome foe he sought—
+So rested he by the Tumtum tree,
+And stood awhile in thought.
+
+And as in uffish thought he stood,
+The Jabberwock, with eyes of flame,
+Came whiffling through the tulgey wood,
+And burbled as it came!
+
+One, two! One, two! And through and through
+The vorpal blade went snicker-snack!
+He left it dead, and with its head
+He went galumphing back.
+
+“And hast thou slain the Jabberwock?
+Come to my arms, my beamish boy!
+O frabjous day! Callooh! Callay!”
+He chortled in his joy.
+
+’Twas brillig, and the slithy toves
+Did gyre and gimble in the wabe;
+All mimsy were the borogoves,
+And the mome raths outgrabe.
+
+=== The Gettysburg Address (public domain) ===
+
+Four score and seven years ago our fathers brought forth on this continent, a new nation, conceived in Liberty, and dedicated to the proposition that all men are created equal.
+
+Now we are engaged in a great civil war, testing whether that nation, or any nation so conceived and so dedicated, can long endure. We are met on a great battle-field of that war. We have come to dedicate a portion of that field, as a final resting place for those who here gave their lives that that nation might live. It is altogether fitting and proper that we should do this.
+
+But, in a larger sense, we can not dedicate—we can not consecrate—we can not hallow—this ground. The brave men, living and dead, who struggled here, have consecrated it, far above our poor power to add or detract. The world will little note, nor long remember what we say here, but it can never forget what they did here. It is for us the living, rather, to be dedicated here to the unfinished work which they who fought here have thus far so nobly advanced.
+
+=== Pride and Prejudice, opening (Jane Austen, public domain) ===
+
+It is a truth universally acknowledged, that a single man in possession of a good fortune, must be in want of a wife.
+
+However little known the feelings or views of such a man may be on his first entering a neighbourhood, this truth is so well fixed in the minds of the surrounding families, that he is considered the rightful property of some one or other of their daughters.
+
+“My dear Mr. Bennet,” said his lady one day, “have you heard that Netherfield Park is let at last?”
+
+Mr. Bennet replied that he had not.
+
+“But it is,” returned she; “for Mrs. Long has just been here, and she told me all about it.”
+
+Mr. Bennet made no answer.
+
+“Do you not want to know who has taken it?” cried his wife impatiently.
+
+“You want to tell me, and I have no objection to hearing it.”
+
+This was invitation enough.
+
+=== Synthetic notes (original text for this repo; mixed register) ===
+
+Neural networks map sequences to predictions by adjusting weights. A language model assigns probability to the next token given prior context. Training minimizes cross-entropy between predicted and observed tokens.
+
+In software engineering, small reproducible experiments beat large vague plans. Version control, clear defaults, and documented data paths keep research portable.
+
+Cooking analogy: mise en place is tokenization; the recipe is the architecture; the oven is your accelerator; tasting as you go is evaluation.

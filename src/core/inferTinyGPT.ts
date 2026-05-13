@@ -1,5 +1,11 @@
-import { RegexBPETokenizer } from "./tokenizer";
 import { WebManifest, viewF32 } from "./webModel";
+
+/** Minimal tokenizer surface for generation (character BPE or GPT-2 tiktoken). */
+export type TextTokenizer = {
+  encode(text: string): number[];
+  decode(ids: number[]): string;
+  specialTokens?: Map<string, number>;
+};
 
 type Tensors = Record<string, Float32Array>;
 
@@ -103,7 +109,7 @@ function mulberry32(seed: number) {
 
 export type TinyGPTWeb = {
   manifest: WebManifest;
-  tokenizer: RegexBPETokenizer;
+  tokenizer: TextTokenizer;
   tensors: Tensors;
   generate: (prompt: string, opts: { maxNewTokens: number; temperature: number; topK: number; seed: number }) => string;
 };
@@ -116,7 +122,7 @@ export function loadTensors(weightsBuf: ArrayBuffer, manifest: WebManifest): Ten
   return t;
 }
 
-export function createTinyGPTWeb(manifest: WebManifest, tokenizer: RegexBPETokenizer, tensors: Tensors): TinyGPTWeb {
+export function createTinyGPTWeb(manifest: WebManifest, tokenizer: TextTokenizer, tensors: Tensors): TinyGPTWeb {
   const cfg = manifest.config;
   const { n_layer, n_head, n_embd, block_size, vocab_size } = cfg;
   const headDim = n_embd / n_head;
@@ -151,7 +157,9 @@ export function createTinyGPTWeb(manifest: WebManifest, tokenizer: RegexBPEToken
 
       // attn: qkv + causal attention + proj
       const qkvW = tensors[`blocks.${l}.attn.qkv.weight`]; // [3*n_embd, n_embd]
+      const qkvB = tensors[`blocks.${l}.attn.qkv.bias`];
       const projW = tensors[`blocks.${l}.attn.proj.weight`]; // [n_embd, n_embd]
+      const projB = tensors[`blocks.${l}.attn.proj.bias`];
 
       const Q = new Float32Array(T * n_embd);
       const K = new Float32Array(T * n_embd);
@@ -160,6 +168,9 @@ export function createTinyGPTWeb(manifest: WebManifest, tokenizer: RegexBPEToken
       for (let t = 0; t < T; t++) {
         const x = takeRow(Xn1, n_embd, t);
         matmulVec(tmp, qkvW, n_embd, x);
+        if (qkvB) {
+          for (let i = 0; i < tmp.length; i++) tmp[i] += qkvB[i];
+        }
         Q.set(tmp.subarray(0, n_embd), t * n_embd);
         K.set(tmp.subarray(n_embd, 2 * n_embd), t * n_embd);
         V.set(tmp.subarray(2 * n_embd, 3 * n_embd), t * n_embd);
@@ -202,6 +213,9 @@ export function createTinyGPTWeb(manifest: WebManifest, tokenizer: RegexBPEToken
       for (let t = 0; t < T; t++) {
         const x = takeRow(attOut, n_embd, t);
         matmulVec(y, projW, n_embd, x);
+        if (projB) {
+          for (let i = 0; i < n_embd; i++) y[i] += projB[i];
+        }
         setRow(projOut, n_embd, t, y);
       }
 
@@ -221,15 +235,23 @@ export function createTinyGPTWeb(manifest: WebManifest, tokenizer: RegexBPEToken
 
       // MLP: fc -> gelu -> proj
       const fcW = tensors[`blocks.${l}.mlp.fc.weight`]; // [4n, n]
+      const fcB = tensors[`blocks.${l}.mlp.fc.bias`];
       const prW = tensors[`blocks.${l}.mlp.proj.weight`]; // [n, 4n]
+      const prB = tensors[`blocks.${l}.mlp.proj.bias`];
       const hid = new Float32Array(4 * n_embd);
       const out = new Float32Array(n_embd);
       const mlpOut = new Float32Array(T * n_embd);
       for (let t = 0; t < T; t++) {
         const x = takeRow(Xn2, n_embd, t);
         matmulVec(hid, fcW, n_embd, x);
+        if (fcB) {
+          for (let i = 0; i < hid.length; i++) hid[i] += fcB[i];
+        }
         for (let i = 0; i < hid.length; i++) hid[i] = gelu(hid[i]);
         matmulVec(out, prW, 4 * n_embd, hid);
+        if (prB) {
+          for (let i = 0; i < n_embd; i++) out[i] += prB[i];
+        }
         setRow(mlpOut, n_embd, t, out);
       }
 
@@ -258,14 +280,15 @@ export function createTinyGPTWeb(manifest: WebManifest, tokenizer: RegexBPEToken
   function generate(prompt: string, opts: { maxNewTokens: number; temperature: number; topK: number; seed: number }): string {
     const rng = mulberry32(opts.seed);
     let ids = tokenizer.encode(prompt);
+    const manifestEos = manifest.eos_token_id;
+    const charTokEos = tokenizer.specialTokens?.get("<|eos|>");
     for (let i = 0; i < opts.maxNewTokens; i++) {
       const ctx = ids.slice(Math.max(0, ids.length - block_size));
       const logits = forward(ctx);
       const next = sampleFromLogits(logits, opts.temperature, opts.topK, rng);
       ids = ids.concat([next]);
-      // stop if eos
-      const eos = tokenizer.specialTokens.get("<|eos|>");
-      if (eos !== undefined && next === eos) break;
+      if (manifestEos !== undefined && next === manifestEos) break;
+      if (charTokEos !== undefined && next === charTokEos) break;
     }
     return tokenizer.decode(ids);
   }
