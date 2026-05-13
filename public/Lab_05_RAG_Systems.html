@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>Lab 05 — RAG systems &amp; related ideas | nanochat.replica</title>
+  <style>
+    :root {
+      --bg: #fafafa;
+      --card: #ffffff;
+      --text: #18181b;
+      --muted: #52525b;
+      --border: #e4e4e7;
+      --accent: #ea580c;
+      --code-bg: #f4f4f5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 32px 20px 80px; }
+    .nav {
+      font-size: 14px;
+      margin-bottom: 28px;
+    }
+    .nav a { color: var(--accent); text-decoration: none; }
+    .nav a:hover { text-decoration: underline; }
+    h1 {
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin: 0 0 8px;
+    }
+    .kicker {
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+    .lede { color: var(--muted); font-size: 1.05rem; margin: 0 0 28px; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 22px;
+      margin-bottom: 18px;
+    }
+    h2 {
+      font-size: 15px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 0 0 12px;
+      color: var(--text);
+    }
+    p { margin: 0 0 12px; }
+    p:last-child { margin-bottom: 0; }
+    ul { margin: 8px 0 0; padding-left: 1.2rem; color: var(--muted); }
+    li { margin-bottom: 8px; }
+    li strong { color: var(--text); }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.5;
+      margin: 12px 0 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="nav">
+      <a href="/#/docs">← Course labs</a>
+      ·
+      <a href="/Lab_04_RAG_Foundations.html">Lab 04</a>
+      ·
+      <a href="#/llm">Small LLM demo</a>
+    </nav>
+    <p class="kicker">Lab 05</p>
+    <h1>RAG systems, neighbors, and evaluation</h1>
+    <p class="lede">
+      Production assistants rarely stop at “embed and search.” This lab surveys patterns that sit <strong>next to</strong> vanilla RAG:
+      better retrieval, safer answers, and tooling that looks like agents.
+    </p>
+
+    <section>
+      <h2>Beyond flat vector search</h2>
+      <ul>
+        <li><strong>Hybrid retrieval</strong> — combine keyword search (BM25) with dense vectors so rare tokens and paraphrases both surface good chunks.</li>
+        <li><strong>Re-ranking</strong> — retrieve a wide candidate set (e.g. 50), then score pairs (query, chunk) with a cross-encoder for sharper ordering.</li>
+        <li><strong>Query rewriting</strong> — expand or decompose the user question (multi-query) to improve recall on ambiguous prompts.</li>
+        <li><strong>Metadata filters</strong> — restrict search by tenant, product, date, or ACLs before similarity runs.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Grounding, citations, and trust</h2>
+      <p>
+        For regulated or high-stakes answers, teams often require <strong>inline citations</strong> to retrieved spans. That means
+        storing stable chunk IDs, page offsets, or URLs and asking the model to quote them—then validating that cited text
+        actually appears in the retrieved set (post-checks or constrained decoding).
+      </p>
+    </section>
+
+    <section>
+      <h2>Agents vs. RAG</h2>
+      <p>
+        <strong>RAG</strong> is usually one retrieve-then-read pass (maybe with rerank). <strong>Agents</strong> loop: plan → call tools
+        (search, SQL, calculators) → observe → repeat. Tool-using agents can implement RAG as one tool among many; the hard parts
+        become orchestration, budgets, and auditing every tool call.
+      </p>
+    </section>
+
+    <section>
+      <h2>Evaluation (what to measure)</h2>
+      <ul>
+        <li><strong>Retrieval quality</strong> — is the gold passage in the top‑k? (hit rate, MRR, nDCG)</li>
+        <li><strong>Answer faithfulness</strong> — does the answer contradict the provided context? (LLM-as-judge or entailment models)</li>
+        <li><strong>Latency &amp; cost</strong> — embedding calls, rerankers, and context length drive price per query.</li>
+        <li><strong>Freshness</strong> — time from document update to searchable index.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Sketch: minimal RAG orchestration</h2>
+      <pre><code># Pseudocode — not executed in this static lab
+chunks = chunk_documents(docs)
+index = VectorIndex(embed(chunks))
+
+def answer(question):
+    q = embed(question)
+    ctx = retrieve(index, q, k=8)
+    prompt = build_prompt(ctx, question)
+    return llm.generate(prompt)</code></pre>
+      <p style="margin-top:12px;color:var(--muted);font-size:14px;">
+        Swap <code>llm.generate</code> for the browser inference path in this repo when experimenting with small models; plug in your
+        favorite vector store for <code>retrieve</code>.
+      </p>
+    </section>
+  </div>
+</body>
+</html>

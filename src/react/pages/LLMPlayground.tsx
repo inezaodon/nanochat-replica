@@ -104,11 +104,17 @@ export function LLMPlayground() {
       );
     } catch (e) {
       const msg = (e as Error).message;
-      const hint =
-        preset === "gpt2-small"
-          ? `${msg} If the bundle is missing, run: python -m llm.prepare_course_model --out_dir public/models/gpt2-small`
-          : msg;
-      setStatus(hint);
+      if (preset === "gpt2-small" && (msg.includes("404") || msg.includes("Failed to fetch"))) {
+        setStatus(
+          "gpt2-small is not in your dev server yet: public/models/gpt2-small/manifest.json returned 404. From the repo root run: python -m llm.prepare_course_model --out_dir public/models/gpt2-small — wait for files to appear, then click Load model again (restart npm run dev if the folder was created while it was running).",
+        );
+      } else if (preset === "gpt2-small") {
+        setStatus(
+          `${msg} If the bundle is missing, run: python -m llm.prepare_course_model --out_dir public/models/gpt2-small`,
+        );
+      } else {
+        setStatus(msg);
+      }
       setModel(null);
     } finally {
       setLoading(false);
@@ -197,7 +203,16 @@ export function LLMPlayground() {
                 Clear prompt
               </button>
             </div>
-            <div className="status-line" role="status">
+            <div
+              className={`status-line ${
+                status.includes("Failed to fetch") ||
+                status.includes("404") ||
+                status.startsWith("gpt2-small is not")
+                  ? "status-line--error"
+                  : ""
+              }`}
+              role="status"
+            >
               {status}
             </div>
             <div className="field mb-0">
@@ -227,7 +242,7 @@ export function LLMPlayground() {
                   onError={() => setShowDiagramFallback(true)}
                 />
               ) : (
-                <div className="mono" style={{ padding: 14, fontSize: 12, lineHeight: 1.55, background: "rgba(9,9,11,.65)" }}>
+                <div className="mono diagram-fallback">
                   prompt → tokenizer → token IDs → transformer → logits → top‑k / temperature → next token → repeat
                 </div>
               )}

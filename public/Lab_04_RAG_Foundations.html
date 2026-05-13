@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>Lab 04 — RAG foundations | nanochat.replica</title>
+  <style>
+    :root {
+      --bg: #fafafa;
+      --card: #ffffff;
+      --text: #18181b;
+      --muted: #52525b;
+      --border: #e4e4e7;
+      --accent: #ea580c;
+      --code-bg: #f4f4f5;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 32px 20px 80px; }
+    .nav {
+      font-size: 14px;
+      margin-bottom: 28px;
+    }
+    .nav a { color: var(--accent); text-decoration: none; }
+    .nav a:hover { text-decoration: underline; }
+    h1 {
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin: 0 0 8px;
+    }
+    .kicker {
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+    .lede { color: var(--muted); font-size: 1.05rem; margin: 0 0 28px; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 22px;
+      margin-bottom: 18px;
+    }
+    h2 {
+      font-size: 15px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin: 0 0 12px;
+      color: var(--text);
+    }
+    p { margin: 0 0 12px; }
+    p:last-child { margin-bottom: 0; }
+    ul { margin: 8px 0 0; padding-left: 1.2rem; color: var(--muted); }
+    li { margin-bottom: 8px; }
+    li strong { color: var(--text); }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.5;
+      margin: 12px 0 0;
+    }
+    .diagram {
+      font-family: ui-monospace, monospace;
+      font-size: 12px;
+      line-height: 1.45;
+      white-space: pre;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="nav">
+      <a href="/#/docs">← Course labs</a>
+      ·
+      <a href="/#/llm">Small LLM demo</a>
+    </nav>
+    <p class="kicker">Lab 04</p>
+    <h1>Retrieval-augmented generation (RAG): foundations</h1>
+    <p class="lede">
+      Large language models only “know” what was in their training data. RAG connects a model to <strong>your</strong> documents
+      at query time by retrieving relevant passages and injecting them into the prompt.
+    </p>
+
+    <section>
+      <h2>Why RAG exists</h2>
+      <p>
+        Static weights go stale the day after training. Fine-tuning on every document update is expensive. RAG instead keeps a
+        <strong>mutable document store</strong> and lets the model read excerpts on demand—similar in spirit to letting a human
+        analyst open the right file before answering.
+      </p>
+    </section>
+
+    <section>
+      <h2>The core pipeline</h2>
+      <div class="diagram">Documents
+   └── chunk (split into overlapping segments)
+           └── embed (vector per chunk)
+                   └── index (vector DB or ANN library)
+
+User question
+   └── embed query vector
+           └── retrieve top‑k similar chunks
+                   └── augment prompt (context + question)
+                           └── LLM generates answer</div>
+      <ul>
+        <li><strong>Chunking</strong> — split text into pieces small enough to fit context windows; overlap reduces boundary cuts through sentences.</li>
+        <li><strong>Embeddings</strong> — map text to dense vectors so “similar meaning” is near in vector space.</li>
+        <li><strong>Retriever</strong> — approximate nearest neighbors (ANN) over millions of vectors in milliseconds.</li>
+        <li><strong>Augmentation</strong> — prepend retrieved chunks with instructions (“Answer using only the following context…”).</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Failure modes you should expect</h2>
+      <ul>
+        <li><strong>Wrong chunks</strong> — the retriever misses the passage that contains the answer (recall problem).</li>
+        <li><strong>Lost in the middle</strong> — models sometimes underweight evidence buried in very long contexts.</li>
+        <li><strong>Hallucination with citations</strong> — the model may still confabulate unless you enforce grounding rules.</li>
+        <li><strong>Stale index</strong> — documents change; embeddings must be refreshed or versioned.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Mini glossary</h2>
+      <ul>
+        <li><strong>Vector store</strong> — database specialized for similarity search over embeddings.</li>
+        <li><strong>Top‑k</strong> — retrieve the k closest chunk vectors to the query vector.</li>
+        <li><strong>Cosine similarity</strong> — common score between two unit-normalized embedding vectors.</li>
+        <li><strong>Token budget</strong> — hard limit on how much retrieved text fits beside the user question.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Where this repo connects</h2>
+      <p>
+        This project trains a <strong>small GPT-style decoder</strong> and runs inference in the browser—the same family of models
+        often used as the “generator” step in RAG. The <em>retrieval</em> side (chunking, embedding APIs, vector DB) is not bundled
+        here; Lab 05 sketches how you would wire them in production.
+      </p>
+      <p style="margin-top:14px;font-size:14px;">
+        <a href="/Lab_05_RAG_Systems.html" style="color:var(--accent);font-weight:600;">Continue to Lab 05 →</a>
+      </p>
+    </section>
+  </div>
+</body>
+</html>

@@ -14,13 +14,13 @@ export function ThreePlayground() {
     if (!mount) return;
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x09090b, 0.038);
+    scene.fog = new THREE.FogExp2(0xf4f4f5, 0.032);
 
     const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 120);
     camera.position.set(0, 0.4, 5.2);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    renderer.setClearColor(0x09090b, 1);
+    renderer.setClearColor(0xf4f4f5, 1);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
@@ -28,7 +28,7 @@ export function ThreePlayground() {
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     mount.appendChild(renderer.domElement);
 
-    const hemi = new THREE.HemisphereLight(0xffe4c4, 0x09090b, 0.72);
+    const hemi = new THREE.HemisphereLight(0xffffff, 0xe4e4e7, 0.85);
     scene.add(hemi);
 
     const key = new THREE.DirectionalLight(0xffffff, 1.35);
@@ -37,16 +37,16 @@ export function ThreePlayground() {
     key.shadow.mapSize.setScalar(1024);
     scene.add(key);
 
-    const rim = new THREE.PointLight(0xfb923c, 38, 24, 2);
+    const rim = new THREE.PointLight(0xea580c, 42, 26, 2);
     rim.position.set(-2.5, 1.2, 2);
     scene.add(rim);
 
     const knotGeo = new THREE.TorusKnotGeometry(1.05, 0.32, 220, 36, 2, 3);
     const knotMat = new THREE.MeshPhysicalMaterial({
-      color: 0xfb923c,
-      metalness: 0.88,
-      roughness: 0.16,
-      emissive: 0x7c2d12,
+      color: 0xea580c,
+      metalness: 0.82,
+      roughness: 0.18,
+      emissive: 0x9a3412,
       emissiveIntensity: 0.35,
       clearcoat: 1,
       clearcoatRoughness: 0.12,
@@ -61,10 +61,10 @@ export function ThreePlayground() {
 
     const wireGeo = new THREE.IcosahedronGeometry(2.15, 2);
     const wireMat = new THREE.MeshBasicMaterial({
-      color: 0xfdba74,
+      color: 0xfb923c,
       wireframe: true,
       transparent: true,
-      opacity: 0.12,
+      opacity: 0.22,
     });
     const wire = new THREE.Mesh(wireGeo, wireMat);
     scene.add(wire);
@@ -83,9 +83,9 @@ export function ThreePlayground() {
       starPos[i * 3 + 1] = y;
       starPos[i * 3 + 2] = z;
       const t = Math.random();
-      starCol[i * 3] = 1;
-      starCol[i * 3 + 1] = 0.55 + t * 0.35;
-      starCol[i * 3 + 2] = 0.35 + t * 0.25;
+      starCol[i * 3] = 0.35 + t * 0.25;
+      starCol[i * 3 + 1] = 0.45 + t * 0.2;
+      starCol[i * 3 + 2] = 0.55 + t * 0.35;
     }
     const starGeo = new THREE.BufferGeometry();
     starGeo.setAttribute("position", new THREE.BufferAttribute(starPos, 3));

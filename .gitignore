@@ -1,6 +1,9 @@
 node_modules/
 dist/
 
+# Course PDFs at repo root (facts ship as TS; keep PDFs local-only)
+/*.pdf
+
 .DS_Store
 
 .venv/

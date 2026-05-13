@@ -1,4 +1,5 @@
 import React from "react";
+import { ExamFactsSlider } from "../components/ExamFactsSlider";
 
 export function Home() {
   return (
@@ -43,6 +44,12 @@ export function Home() {
               <figcaption>Tiny LM stack · tokenizer · decoder · browser inference</figcaption>
             </figure>
           </div>
+        </div>
+      </section>
+
+      <section className="card" style={{ marginBottom: 22 }} aria-label="Study facts carousel">
+        <div className="cardB">
+          <ExamFactsSlider />
         </div>
       </section>
 

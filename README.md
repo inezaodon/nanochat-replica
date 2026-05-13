@@ -117,6 +117,8 @@ Static exports from the original labs are kept as references:
 - `public/Lab_01_Tokenization.html`
 - `public/Lab_02_Embedding.html`
 - `public/Lab_03_Transformer_Block.html`
+- `public/Lab_04_RAG_Foundations.html` (RAG: chunking, embeddings, retrieval pipeline)
+- `public/Lab_05_RAG_Systems.html` (hybrid search, reranking, agents, evaluation)
 - `public/legacy/GPT2_Replica_12Heads.html` (GPT‑2 multi‑head attention visual demo)
 
 You can open these directly (or via the **Course labs** tab in the UI) to connect the code to the teaching material.

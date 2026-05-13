@@ -1,0 +1,5 @@
+Files mirror:
+  https://github.com/wtheisen/nd-cse-10124-lectures/tree/master/Datasets
+
+For the full Stanford Alpaca JSON (52k rows), run:
+  python -m llm.fetch_course_datasets --fetch-hf-alpaca
