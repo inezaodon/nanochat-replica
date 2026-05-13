@@ -1,12 +1,12 @@
 # nanochat-replica
 
-Small GPT‑style language model you can train on Shakespeare and run **entirely in the browser**, built as a learning playground for tokenization, embeddings, and transformer blocks.
+Small GPT‑style language model you can train on **your own text** (default: a multi-source corpus, not Shakespeare-only) and run **entirely in the browser**, built as a learning playground for tokenization, embeddings, and transformer blocks.
 
 ---
 
 ## Features
 
-- **Tiny GPT**: 2‑layer GPT‑style decoder with 12 attention heads and positional embeddings.
+- **Tiny GPT**: small GPT‑style decoder you configure (`--n_layer`, etc.); default training text is `data/training_corpus.txt` (mixed public-domain + original snippets).
 - **Character tokenizer**: Character-level tokenization, shared between Python and TypeScript.
 - **Browser inference**: Pure TypeScript forward pass and sampling – no server required.
 - **React UI**: Responsive, single‑page interface with a “Small LLM” playground.
@@ -19,10 +19,10 @@ Small GPT‑style language model you can train on Shakespeare and run **entirely
 - `src/react/` – React app (`App`, `Home`, `LLMPlayground`, and docs page).
 - `src/core/` – Tokenizer, tiny GPT inference, and web manifest helpers.
 - `llm/` – PyTorch training + export code:
-  - `train.py` – train a tiny GPT on `data/shakespeare.txt`
+  - `train.py` – train a tiny GPT on UTF-8 text (`--data` file or comma-separated list; default `data/training_corpus.txt`)
   - `model.py` – GPT config and modules (attention, MLP, blocks)
   - `tokenizer_bpe.py` – character-level tokenizer with JSON export
-  - `export_web.py` – export weights + tokenizer for the browser
+  - `expand_corpus.py` – merge Hugging Face / Gutenberg / local text into one training file
 - `public/models/tiny-gpt/` – exported weights consumed by the web app.
 - `public/Lab_*.html` – static notebook exports from the original course.
 
@@ -61,7 +61,7 @@ Run a training job (CPU example):
 
 ```bash
 python -m llm.train \
-  --data data/shakespeare.txt \
+  --data data/training_corpus.txt \
   --device cpu \
   --out_dir checkpoints/tiny-gpt
 ```
@@ -71,7 +71,33 @@ This writes:
 - `checkpoints/tiny-gpt/model.pt`
 - `checkpoints/tiny-gpt/tokenizer.json`
 
-Export the checkpoint to browser‑friendly weights:
+You can pass **several files** (concatenated in order), e.g.  
+`--data data/training_corpus.txt,data/course/jabberwocky.txt`  
+after `python -m llm.fetch_course_datasets`, or point `--data` at `data/shakespeare.txt` alone if you want that baseline.
+
+### 2b. Expand the corpus (Hugging Face, Gutenberg, local)
+
+Install deps (`datasets` is listed in `requirements.txt`). Then for example:
+
+```bash
+python -m llm.expand_corpus \
+  --out data/corpus_expanded.txt \
+  --include-local data/training_corpus.txt \
+  --hf-preset wikitext-103 ag_news imdb yelp tweet_sentiment \
+  --gutenberg 11 1342 84 \
+  --max-chars-per-preset 120000 \
+  --max-chars-gutenberg 200000
+```
+
+Train on the merged file:
+
+```bash
+python -m llm.train --data data/corpus_expanded.txt --device cuda --out_dir checkpoints/tiny-gpt
+```
+
+**Kaggle:** install the [Kaggle API](https://github.com/Kaggle/kaggle-api), place `kaggle.json` under `~/.kaggle/`, run `kaggle datasets download …`, unzip, then add those files with repeated `--include-local path.csv`. **Licenses** differ by dataset; you are responsible for terms of use.
+
+### 3. Export to the browser
 
 ```bash
 python -m llm.export_web \

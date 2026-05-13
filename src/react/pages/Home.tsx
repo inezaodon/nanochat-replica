@@ -7,7 +7,7 @@ export function Home() {
         <div className="cardB" style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "center" }}>
           <div style={{ flex: "1 1 260px", minWidth: 0 }}>
             <p className="muted" style={{ textTransform: "uppercase", letterSpacing: "0.18em", marginBottom: 6 }}>
-              Shakespeare‑sized transformer
+              Small‑scale transformer
             </p>
             <h1
               style={{
@@ -30,8 +30,9 @@ export function Home() {
               in your browser.
             </h1>
             <p style={{ marginTop: 14, maxWidth: 520 }}>
-              Built from first principles: BPE tokenizer, transformer blocks, and a GPT‑style decoder trained on
-              Shakespeare, all wrapped in a modern React experience.
+              Built from first principles: BPE tokenizer, transformer blocks, and a GPT‑style decoder you train on
+              your own text (default mix in <span className="mono">data/training_corpus.txt</span>), all wrapped in a
+              modern React experience.
             </p>
             <ul style={{ marginTop: 14, paddingLeft: 18 }}>
               <li>
@@ -79,8 +80,8 @@ export function Home() {
           <div className="cardB">
             <ul>
               <li>
-                <strong>Tokenizer</strong>: Regex‑based BPE trained on Shakespeare, exported to JSON and shared between
-                Python and TypeScript.
+                <strong>Tokenizer</strong>: Character‑level “BPE” tokenizer trained on your corpus, exported to JSON
+                and shared between Python and TypeScript.
               </li>
               <li>
                 <strong>Model</strong>: GPT‑style decoder (embedding + positional + transformer blocks + lm_head) with

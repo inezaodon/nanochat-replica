@@ -17,12 +17,19 @@ class GPTConfig:
 
 
 class CausalSelfAttention(nn.Module):
+    """
+    Causal self-attention. Prefers ``torch.nn.functional.scaled_dot_product_attention``
+    (PyTorch SDPA / flash-backed kernels on CUDA when available), with a manual
+    matmul fallback for older runtimes or rare backend issues.
+    """
+
     def __init__(self, cfg: GPTConfig):
         super().__init__()
         assert cfg.n_embd % cfg.n_head == 0
         self.n_head = cfg.n_head
         self.n_embd = cfg.n_embd
         self.head_dim = cfg.n_embd // cfg.n_head
+        self.dropout = cfg.dropout
 
         self.qkv = nn.Linear(cfg.n_embd, 3 * cfg.n_embd, bias=False)
         self.proj = nn.Linear(cfg.n_embd, cfg.n_embd, bias=False)
@@ -31,6 +38,7 @@ class CausalSelfAttention(nn.Module):
 
         mask = torch.tril(torch.ones(cfg.block_size, cfg.block_size)).view(1, 1, cfg.block_size, cfg.block_size)
         self.register_buffer("mask", mask, persistent=False)
+        self._sdpa = hasattr(F, "scaled_dot_product_attention")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         B, T, C = x.shape
@@ -41,14 +49,25 @@ class CausalSelfAttention(nn.Module):
         k = k.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
         v = v.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
 
-        att = (q @ k.transpose(-2, -1)) * (1.0 / (self.head_dim ** 0.5))  # (B,nh,T,T)
-        att = att.masked_fill(self.mask[:, :, :T, :T] == 0, float("-inf"))
-        att = F.softmax(att, dim=-1)
-        att = self.attn_drop(att)
-        y = att @ v  # (B,nh,T,hd)
+        if self._sdpa:
+            try:
+                drop = self.dropout if self.training else 0.0
+                y = F.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=drop, is_causal=True)
+            except Exception:
+                y = self._attention_manual(q, k, v, T)
+        else:
+            y = self._attention_manual(q, k, v, T)
+
         y = y.transpose(1, 2).contiguous().view(B, T, C)  # (B,T,C)
         y = self.resid_drop(self.proj(y))
         return y
+
+    def _attention_manual(self, q: torch.Tensor, k: torch.Tensor, v: torch.Tensor, T: int) -> torch.Tensor:
+        att = (q @ k.transpose(-2, -1)) * (1.0 / (self.head_dim ** 0.5))
+        att = att.masked_fill(self.mask[:, :, :T, :T] == 0, float("-inf"))
+        att = F.softmax(att, dim=-1)
+        att = self.attn_drop(att)
+        return att @ v
 
 
 class MLP(nn.Module):
