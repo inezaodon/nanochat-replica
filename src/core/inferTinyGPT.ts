@@ -46,6 +46,45 @@ function softmaxInPlace(a: Float32Array) {
   for (let i = 0; i < a.length; i++) a[i] *= inv;
 }
 
+/** Min-heap (size n) over heap[0..n); smallest value at root. */
+function heapSiftDown(heap: Float32Array, i: number, n: number) {
+  while (true) {
+    let m = i;
+    const l = i * 2 + 1;
+    const r = i * 2 + 2;
+    if (l < n && heap[l] < heap[m]) m = l;
+    if (r < n && heap[r] < heap[m]) m = r;
+    if (m === i) break;
+    const t = heap[i];
+    heap[i] = heap[m];
+    heap[m] = t;
+    i = m;
+  }
+}
+
+function heapBuildMin(heap: Float32Array, n: number) {
+  for (let i = Math.floor(n / 2) - 1; i >= 0; i--) heapSiftDown(heap, i, n);
+}
+
+/**
+ * k-th largest value in arr (1-indexed k), O(n log k) — avoids full sort on vocab-sized arrays.
+ * Uses a min-heap of the k largest elements seen so far.
+ */
+function kthLargest(arr: Float32Array, k: number): number {
+  if (k <= 0 || k > arr.length) return -Infinity;
+  const heap = new Float32Array(k);
+  for (let i = 0; i < k; i++) heap[i] = arr[i];
+  heapBuildMin(heap, k);
+  for (let i = k; i < arr.length; i++) {
+    const x = arr[i];
+    if (x > heap[0]) {
+      heap[0] = x;
+      heapSiftDown(heap, 0, k);
+    }
+  }
+  return heap[0];
+}
+
 function matmulVec(out: Float32Array, W: Float32Array, inDim: number, x: Float32Array) {
   // W: [outDim, inDim] row-major, out.length = outDim
   for (let i = 0; i < out.length; i++) {
@@ -71,29 +110,26 @@ function setRow(mat: Float32Array, cols: number, row: number, x: Float32Array) {
 }
 
 function sampleFromLogits(logits: Float32Array, temperature: number, topK: number, rng: () => number): number {
-  const scaled = new Float32Array(logits.length);
   const invT = 1 / Math.max(1e-6, temperature);
-  for (let i = 0; i < logits.length; i++) scaled[i] = logits[i] * invT;
+  for (let i = 0; i < logits.length; i++) logits[i] *= invT;
 
-  // top-k filter
+  // top-k filter (heap k-th largest; full vocab sort was dominant cost for GPT-2)
   let cutoff = -Infinity;
-  if (topK > 0 && topK < scaled.length) {
-    const arr = Array.from(scaled);
-    arr.sort((a, b) => b - a);
-    cutoff = arr[topK - 1];
+  if (topK > 0 && topK < logits.length) {
+    cutoff = kthLargest(logits, topK);
   }
-  for (let i = 0; i < scaled.length; i++) {
-    if (scaled[i] < cutoff) scaled[i] = -1e9;
+  for (let i = 0; i < logits.length; i++) {
+    if (logits[i] < cutoff) logits[i] = -1e9;
   }
 
-  softmaxInPlace(scaled);
+  softmaxInPlace(logits);
   const r = rng();
   let cum = 0;
-  for (let i = 0; i < scaled.length; i++) {
-    cum += scaled[i];
+  for (let i = 0; i < logits.length; i++) {
+    cum += logits[i];
     if (r <= cum) return i;
   }
-  return scaled.length - 1;
+  return logits.length - 1;
 }
 
 function mulberry32(seed: number) {
@@ -279,14 +315,15 @@ export function createTinyGPTWeb(manifest: WebManifest, tokenizer: TextTokenizer
 
   function generate(prompt: string, opts: { maxNewTokens: number; temperature: number; topK: number; seed: number }): string {
     const rng = mulberry32(opts.seed);
-    let ids = tokenizer.encode(prompt);
+    const ids = tokenizer.encode(prompt);
     const manifestEos = manifest.eos_token_id;
     const charTokEos = tokenizer.specialTokens?.get("<|eos|>");
     for (let i = 0; i < opts.maxNewTokens; i++) {
-      const ctx = ids.slice(Math.max(0, ids.length - block_size));
+      const from = Math.max(0, ids.length - block_size);
+      const ctx = from === 0 ? ids : ids.slice(from);
       const logits = forward(ctx);
       const next = sampleFromLogits(logits, opts.temperature, opts.topK, rng);
-      ids = ids.concat([next]);
+      ids.push(next);
       if (manifestEos !== undefined && next === manifestEos) break;
       if (charTokEos !== undefined && next === charTokEos) break;
     }
