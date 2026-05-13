@@ -24,23 +24,32 @@ jobs:
           pip install torch --index-url https://download.pytorch.org/whl/cpu
 
       - name: Export browser bundle
-        run: python -m llm.prepare_course_model --out_dir public/models/gpt2-small
+        run: python -u -m llm.prepare_course_model --out_dir public/models/gpt2-small
+
+      - name: Verify browser bundle
+        run: |
+          test -f public/models/gpt2-small/manifest.json
+          test -f public/models/gpt2-small/weights.f32.bin
+          du -sh public/models/gpt2-small
 
       - name: Pack tarball
         run: |
           cd public/models
           tar czvf gpt2-small-web.tgz gpt2-small
           ls -lh gpt2-small-web.tgz
+          test -f gpt2-small-web.tgz
 
       - name: Upload release asset
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v2.6.2
         with:
           tag_name: gpt2-web-v1
+          target_commitish: ${{ github.sha }}
           name: GPT-2 small (browser f32 bundle)
           body: |
             Auto-built weights for the Vite app (`public/models/gpt2-small`).
             Consumed by `npm install` via `scripts/ensure-gpt2-web.mjs`.
           files: public/models/gpt2-small-web.tgz
           fail_on_unmatched_files: true
+          overwrite_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

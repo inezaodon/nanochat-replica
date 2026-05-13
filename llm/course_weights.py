@@ -7,8 +7,17 @@ Same URL layout as the course instructions:
 
 from __future__ import annotations
 
+import shutil
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
+
+# GitHub often returns 403 for the default Python urllib User-Agent on release assets.
+_USER_AGENT = (
+    "nanochat-replica/1.0 (llm.course_weights; +https://github.com/inezaodon/nanochat-replica)"
+)
+_MIN_CHECKPOINT_BYTES = 50_000_000  # sanity: real gpt2_small_converted.pt is hundreds of MB
 
 DOWNLOAD_BASE = (
     "https://github.com/wtheisen/nd-cse-10124-lectures/releases/download/weights-v1"
@@ -31,6 +40,38 @@ def course_checkpoint_url(filename: str) -> str:
     return f"{DOWNLOAD_BASE}/{filename}"
 
 
+def _download_url_to_file(url: str, dest: Path, *, timeout_sec: int = 600) -> None:
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": _USER_AGENT,
+            "Accept": "*/*",
+        },
+    )
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    partial = dest.with_suffix(dest.suffix + ".partial")
+    for attempt in range(4):
+        try:
+            if partial.exists():
+                partial.unlink()
+            with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
+                with open(partial, "wb") as out:
+                    shutil.copyfileobj(resp, out, length=1024 * 1024)
+            sz = partial.stat().st_size
+            if sz < _MIN_CHECKPOINT_BYTES:
+                raise RuntimeError(
+                    f"Downloaded file is only {sz} bytes; expected a large .pt checkpoint "
+                    f"(min {_MIN_CHECKPOINT_BYTES}). The server may have returned an error page."
+                )
+            partial.replace(dest)
+            return
+        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError) as e:
+            if isinstance(e, urllib.error.HTTPError) and e.code in (429, 503) and attempt < 3:
+                time.sleep(2**attempt)
+                continue
+            raise
+
+
 def ensure_course_checkpoint(
     filename: str = "gpt2_small_converted.pt",
     *,
@@ -51,6 +92,5 @@ def ensure_course_checkpoint(
 
     url = course_checkpoint_url(filename)
     print(f"[course_weights] downloading\n  {url}\n  -> {dest}")
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    urllib.request.urlretrieve(url, dest)
+    _download_url_to_file(url, dest)
     return dest
