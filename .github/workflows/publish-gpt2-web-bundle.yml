@@ -18,10 +18,11 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install CPU torch (prepare_course_model only needs torch)
+      - name: Install CPU torch + NumPy (export uses tensor.numpy().tobytes())
         run: |
           python -m pip install --upgrade pip
           pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install "numpy>=1.26,<3"
 
       - name: Export browser bundle
         run: python -u -m llm.prepare_course_model --out_dir public/models/gpt2-small
