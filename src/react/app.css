@@ -163,8 +163,8 @@ a:hover {
 
 .hero-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
-  gap: 32px;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 34%);
+  gap: clamp(20px, 4vw, 36px);
   align-items: center;
 }
 
@@ -226,7 +226,9 @@ a:hover {
 
 .media-card img {
   width: 100%;
-  height: 188px;
+  aspect-ratio: 16 / 10;
+  height: auto;
+  max-height: 320px;
   object-fit: cover;
   display: block;
 }
@@ -288,6 +290,10 @@ a:hover {
 
 .cardB {
   padding: 20px;
+}
+
+.home-section {
+  margin-bottom: clamp(18px, 3vw, 28px);
 }
 
 .muted {
@@ -618,12 +624,38 @@ button.primary:hover:not(:disabled) {
   isolation: isolate;
 }
 
+.sticky-stack > .stack-slab:nth-child(1) {
+  z-index: 10;
+}
+.sticky-stack > .stack-slab:nth-child(2) {
+  z-index: 11;
+}
+.sticky-stack > .stack-slab:nth-child(3) {
+  z-index: 12;
+}
+
 .sticky-stack > .stack-slab > .card {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-height: min(84vh, 760px);
   box-shadow: var(--shadow-lift);
+}
+
+/* Softer slab overlap on short viewports — avoids excessive blank scroll */
+@media (max-height: 700px) {
+  .sticky-stack > .stack-slab {
+    min-height: min(78vh, 620px);
+    margin-bottom: calc(-52vh + 2rem);
+  }
+
+  .sticky-stack > .stack-slab > .card {
+    min-height: min(72vh, 560px);
+  }
+
+  .sticky-stack > .stack-slab:last-child > .card {
+    min-height: min(64vh, 520px);
+  }
 }
 
 .sticky-stack > .stack-slab > .card .cardB {
@@ -640,8 +672,12 @@ button.primary:hover:not(:disabled) {
 
 @media (max-width: 768px) {
   .sticky-stack > .stack-slab {
-    margin-bottom: calc(-78vh + 3rem);
-    min-height: min(92vh, 820px);
+    margin-bottom: calc(-62vh + 2.75rem);
+    min-height: min(88vh, 720px);
+  }
+
+  .sticky-stack > .stack-slab > .card {
+    min-height: min(82vh, 680px);
   }
 }
 
@@ -710,7 +746,9 @@ button.primary:hover:not(:disabled) {
 }
 
 /* Practice key study carousel (Overview) */
-.exam-slider__visually-hidden {
+.exam-slider {
+  min-width: 0;
+}
   position: absolute;
   width: 1px;
   height: 1px;
@@ -732,6 +770,7 @@ button.primary:hover:not(:disabled) {
   font-weight: 700;
   letter-spacing: -0.03em;
   color: var(--text);
+  line-height: 1.2;
 }
 
 .exam-slider__subtitle {
@@ -788,8 +827,16 @@ button.primary:hover:not(:disabled) {
   border-radius: var(--radius-md);
   padding: 9px 16px;
   font-size: 13px;
-  border-color: rgba(234, 88, 12, 0.35);
+  font-weight: 600;
+  border: 1px solid rgba(234, 88, 12, 0.35);
   background: var(--surface);
+  flex-shrink: 0;
+}
+
+.exam-slider__nav:hover:not(:disabled) {
+  border-color: rgba(234, 88, 12, 0.55);
+  background: var(--accent-soft);
+  color: var(--pill-active-fg);
 }
 
 .exam-slider__nav:focus-visible {
@@ -799,10 +846,24 @@ button.primary:hover:not(:disabled) {
 
 .exam-slider__dots {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
   margin-top: 14px;
   align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 2px 10px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.exam-slider__dots::-webkit-scrollbar {
+  height: 5px;
+}
+
+.exam-slider__dots::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 999px;
 }
 
 .exam-slider__dot {

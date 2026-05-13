@@ -4,7 +4,7 @@ import { ExamFactsSlider } from "../components/ExamFactsSlider";
 export function Home() {
   return (
     <>
-      <section className="card card--flush" style={{ marginBottom: 22 }}>
+      <section className="card card--flush home-section">
         <div className="cardB">
           <div className="hero-grid">
             <div>
@@ -47,7 +47,11 @@ export function Home() {
         </div>
       </section>
 
-      <section className="card" style={{ marginBottom: 22 }} aria-label="Practice answer key flashcards">
+      <section className="card home-section" aria-label="Practice answer key flashcards">
+        <div className="cardH">
+          <h2>Practice flashcards</h2>
+          <div className="cardH-meta">Answer keys · flip or step through cards</div>
+        </div>
         <div className="cardB">
           <p className="flashcard-decks-lede muted">
             Two decks from the course keys—each carousel only includes facts from that packet. Click a card to flip
@@ -73,7 +77,7 @@ export function Home() {
       </section>
 
       <div className="sticky-stack" aria-label="Deep dive sections">
-        <div className="stack-slab" style={{ zIndex: 10 }}>
+        <div className="stack-slab">
           <section className="card">
             <div className="cardB">
               <p className="section-idx">§1 — Corpus and tokenizer</p>
@@ -103,7 +107,7 @@ export function Home() {
           </section>
         </div>
 
-        <div className="stack-slab" style={{ zIndex: 11 }}>
+        <div className="stack-slab">
           <section className="card">
             <div className="cardB">
               <p className="section-idx">§2 — Architecture</p>
@@ -127,7 +131,7 @@ export function Home() {
           </section>
         </div>
 
-        <div className="stack-slab" style={{ zIndex: 12 }}>
+        <div className="stack-slab">
           <section className="card">
             <div className="cardB">
               <p className="section-idx">§3 — Export and browser</p>

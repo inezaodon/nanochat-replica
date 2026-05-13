@@ -93,9 +93,9 @@ export function ExamFactsSlider({ filterSource, deckTitle, deckSubtitle }: ExamF
       aria-label={deckTitle}
     >
       <div className="exam-slider__header">
-        <h2 className="exam-slider__title" id={headingId}>
+        <h3 className="exam-slider__title" id={headingId}>
           {deckTitle}
-        </h2>
+        </h3>
         {deckSubtitle ? (
           <p className="exam-slider__subtitle muted">{deckSubtitle}</p>
         ) : null}
