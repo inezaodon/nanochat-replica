@@ -33,6 +33,13 @@ jobs:
           test -f public/models/gpt2-small/weights.f32.bin
           du -sh public/models/gpt2-small
 
+      - name: Stage flat assets for in-browser Load model (when local public/ bundle missing)
+        run: |
+          cp public/models/gpt2-small/manifest.json browser-gpt2-manifest.json
+          cp public/models/gpt2-small/tokenizer.json browser-gpt2-tokenizer.json
+          cp public/models/gpt2-small/weights.f32.bin browser-gpt2-weights.f32.bin
+          ls -lh browser-gpt2-*
+
       - name: Pack tarball
         run: |
           cd public/models
@@ -48,8 +55,13 @@ jobs:
           name: GPT-2 small (browser f32 bundle)
           body: |
             Auto-built weights for the Vite app (`public/models/gpt2-small`).
-            Consumed by `npm install` via `scripts/ensure-gpt2-web.mjs`.
-          files: public/models/gpt2-small-web.tgz
+            Includes `gpt2-small-web.tgz` (npm postinstall) and flat `browser-gpt2-*` files
+            so **Load model** can fetch from this release when the site has no local bundle.
+          files: |
+            public/models/gpt2-small-web.tgz
+            browser-gpt2-manifest.json
+            browser-gpt2-tokenizer.json
+            browser-gpt2-weights.f32.bin
           fail_on_unmatched_files: true
           overwrite_files: true
         env:

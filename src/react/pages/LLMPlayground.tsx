@@ -3,15 +3,23 @@ import { Gpt2TiktokenTokenizer } from "../../core/gpt2Tokenizer";
 import { RegexBPETokenizer } from "../../core/tokenizer";
 import { createTinyGPTWeb, loadTensors, TinyGPTWeb } from "../../core/inferTinyGPT";
 import { fetchArrayBuffer, fetchJSON, WebManifest } from "../../core/webModel";
+import { GPT2_RELEASE_FLAT, gpt2ReleaseFlatReachable } from "../config/gpt2Release";
 import { useReveal } from "../hooks/useReveal";
 
 type ModelPreset = "tiny-gpt" | "gpt2-small";
 
-const GPT2_MANIFEST = "/models/gpt2-small/manifest.json";
+/** Vite `base` (e.g. `/` or `/nanochat-replica/`) + `models/<name>`. */
+function modelsDir(name: "tiny-gpt" | "gpt2-small"): string {
+  const b = import.meta.env.BASE_URL;
+  const prefix = b.endsWith("/") ? b : `${b}/`;
+  return `${prefix}models/${name}`;
+}
 
-/** One-time: GitHub Actions builds the tarball consumed by `npm run fetch:gpt2-web` / postinstall. */
+/** Maintainer: builds release `gpt2-web-v1` (tarball + flat files for browser Load). */
 const GPT2_BUNDLE_PUBLISH_WORKFLOW =
   "https://github.com/inezaodon/nanochat-replica/actions/workflows/publish-gpt2-web-bundle.yml";
+
+const GPT2_FAIL_PREFIX = "[gpt2-small]";
 
 export function LLMPlayground() {
   const [preset, setPreset] = useState<ModelPreset>("tiny-gpt");
@@ -37,8 +45,8 @@ export function LLMPlayground() {
       "2) Tiny model — train: python -m llm.train --data data/training_corpus.txt --device cpu",
       "2b) Bigger corpus: python -m llm.expand_corpus --out data/corpus_expanded.txt --include-local data/training_corpus.txt --hf-preset wikitext-103 ag_news",
       "3) Tiny model — export: python -m llm.export_web --ckpt checkpoints/tiny-gpt/model.pt --tokenizer checkpoints/tiny-gpt/tokenizer.json --out_dir public/models/tiny-gpt",
-      "4) ND GPT-2 in browser — after `npm install`, weights download automatically when the gpt2-web-v1 release exists; or run `npm run prepare:gpt2-web` (Python + torch) / `npm run fetch:gpt2-web` to retry the download.",
-      "5) Run web: npm run dev — if gpt2-small is present under public/models, the preset switches automatically; press Load model.",
+      "4) ND GPT-2 — maintainer runs Actions → Publish GPT-2 web bundle once (release gpt2-web-v1). Then Load model loads from disk or, if missing, straight from that release in the browser (large download).",
+      "5) Run web: npm run dev — gpt2-small preset auto-selects when local or release files exist; press Load model.",
     ],
     [],
   );
@@ -47,10 +55,11 @@ export function LLMPlayground() {
     if (preset !== "gpt2-small") return false;
     const s = status;
     return (
+      s.startsWith(GPT2_FAIL_PREFIX) ||
       s.includes("404") ||
       s.includes("Failed to fetch") ||
       s.includes("bundle missing") ||
-      s.startsWith("gpt2-small is not")
+      s.includes("has no browser files yet")
     );
   }, [preset, status]);
 
@@ -65,22 +74,33 @@ export function LLMPlayground() {
     let cancelled = false;
     (async () => {
       try {
-        const r = await fetch(GPT2_MANIFEST, { cache: "no-store" });
+        const localManifest = `${modelsDir("gpt2-small")}/manifest.json`;
+        const r = await fetch(localManifest, { cache: "no-store" });
         if (cancelled) return;
         if (r.ok) {
           setPreset("gpt2-small");
           setStatus(
-            "gpt2-small found under public/models — press Load model. (tiny-gpt is a small char-LM for demos.)",
+            "gpt2-small bundle found on this host — press Load model. (tiny-gpt is a small char-LM for demos.)",
           );
-        } else {
+          return;
+        }
+        if (await gpt2ReleaseFlatReachable()) {
+          if (cancelled) return;
+          setPreset("gpt2-small");
           setStatus(
-            "gpt2-small not on disk (404). Run the publish workflow once (link below), then npm run fetch:gpt2-web — or npm run prepare:gpt2-web with Python + torch.",
+            "gpt2-small is not under public/models, but the GitHub release files exist — press Load model to pull weights in the browser (large download; may take a minute).",
+          );
+          return;
+        }
+        if (!cancelled) {
+          setStatus(
+            "gpt2-small not on disk and the GitHub release has no browser files yet. A maintainer must run Publish GPT-2 web bundle once (link below). Developers: npm run fetch:gpt2-web or npm run prepare:gpt2-web.",
           );
         }
       } catch {
         if (!cancelled) {
           setStatus(
-            "Could not probe gpt2-small (offline?). Defaulting to tiny-gpt. When online: npm run fetch:gpt2-web or npm run prepare:gpt2-web.",
+            "Could not probe gpt2-small (offline?). Defaulting to tiny-gpt. When online, try again or run npm run fetch:gpt2-web.",
           );
         }
       }
@@ -98,16 +118,57 @@ export function LLMPlayground() {
     gpt2TokenizerRef.current?.free();
     gpt2TokenizerRef.current = null;
     try {
-      const base = preset === "tiny-gpt" ? "/models/tiny-gpt" : "/models/gpt2-small";
-      const manifest = await fetchJSON<WebManifest>(`${base}/manifest.json`);
-      const tokObj = await fetchJSON<{
+      type TokJson = {
         tokenizer_type?: string;
         merges?: Record<string, number>;
         vocab: Record<string, string>;
         special_tokens: Record<string, number>;
         pattern?: string;
-      }>(`${base}/tokenizer.json`);
+      };
 
+      if (preset === "tiny-gpt") {
+        const base = modelsDir("tiny-gpt");
+        const manifest = await fetchJSON<WebManifest>(`${base}/manifest.json`);
+        const tokObj = await fetchJSON<TokJson>(`${base}/tokenizer.json`);
+        let tokenizer: RegexBPETokenizer | Gpt2TiktokenTokenizer;
+        if (tokObj.tokenizer_type === "gpt2_tiktoken" || manifest.tokenizer_type === "gpt2_tiktoken") {
+          const g2 = new Gpt2TiktokenTokenizer();
+          gpt2TokenizerRef.current = g2;
+          tokenizer = g2;
+        } else {
+          tokenizer = RegexBPETokenizer.fromJSON(tokObj);
+        }
+        const buf = await fetchArrayBuffer(`${base}/${manifest.weights}`);
+        const tensors = loadTensors(buf, manifest);
+        const m = createTinyGPTWeb(manifest, tokenizer, tensors);
+        setModel(m);
+        setStatus(
+          `Loaded ${preset}: vocab=${manifest.config.vocab_size}, layers=${manifest.config.n_layer}, heads=${manifest.config.n_head}, embd=${manifest.config.n_embd}`,
+        );
+        return;
+      }
+
+      const gpt2Local = modelsDir("gpt2-small");
+      let manifest: WebManifest;
+      let tokUrl: string;
+      let weightsUrl: string;
+      let sourceNote = "";
+
+      try {
+        manifest = await fetchJSON<WebManifest>(`${gpt2Local}/manifest.json`);
+        tokUrl = `${gpt2Local}/tokenizer.json`;
+        weightsUrl = `${gpt2Local}/${manifest.weights}`;
+      } catch {
+        setStatus(
+          "No local gpt2-small folder — loading manifest, tokenizer, and weights from GitHub release gpt2-web-v1 (large; first time can take several minutes)…",
+        );
+        manifest = await fetchJSON<WebManifest>(GPT2_RELEASE_FLAT.manifest);
+        tokUrl = GPT2_RELEASE_FLAT.tokenizer;
+        weightsUrl = GPT2_RELEASE_FLAT.weights;
+        sourceNote = " — source: GitHub release";
+      }
+
+      const tokObj = await fetchJSON<TokJson>(tokUrl);
       let tokenizer: RegexBPETokenizer | Gpt2TiktokenTokenizer;
       if (tokObj.tokenizer_type === "gpt2_tiktoken" || manifest.tokenizer_type === "gpt2_tiktoken") {
         const g2 = new Gpt2TiktokenTokenizer();
@@ -117,22 +178,18 @@ export function LLMPlayground() {
         tokenizer = RegexBPETokenizer.fromJSON(tokObj);
       }
 
-      const buf = await fetchArrayBuffer(`${base}/${manifest.weights}`);
+      const buf = await fetchArrayBuffer(weightsUrl);
       const tensors = loadTensors(buf, manifest);
       const m = createTinyGPTWeb(manifest, tokenizer, tensors);
       setModel(m);
       setStatus(
-        `Loaded ${preset}: vocab=${manifest.config.vocab_size}, layers=${manifest.config.n_layer}, heads=${manifest.config.n_head}, embd=${manifest.config.n_embd}`,
+        `Loaded gpt2-small${sourceNote}: vocab=${manifest.config.vocab_size}, layers=${manifest.config.n_layer}, heads=${manifest.config.n_head}, embd=${manifest.config.n_embd}`,
       );
     } catch (e) {
       const msg = (e as Error).message;
-      if (preset === "gpt2-small" && (msg.includes("404") || msg.includes("Failed to fetch"))) {
+      if (preset === "gpt2-small") {
         setStatus(
-          "gpt2-small bundle missing (404). Follow the steps below, or npm run fetch:gpt2-web / npm run prepare:gpt2-web. Restart npm run dev after files land.",
-        );
-      } else if (preset === "gpt2-small") {
-        setStatus(
-          `${msg} If the bundle is missing: npm run fetch:gpt2-web or npm run prepare:gpt2-web.`,
+          `${GPT2_FAIL_PREFIX} ${msg} This page cannot start GitHub Actions (no repo token). If the release is missing, open Publish GPT-2 web bundle (below) once. If your browser blocks cross-origin downloads, run npm run fetch:gpt2-web or npm run prepare:gpt2-web locally.`,
         );
       } else {
         setStatus(msg);
@@ -227,10 +284,11 @@ export function LLMPlayground() {
             </div>
             <div
               className={`status-line ${
+                status.startsWith(GPT2_FAIL_PREFIX) ||
                 status.includes("Failed to fetch") ||
                 status.includes("404") ||
                 status.includes("bundle missing") ||
-                status.startsWith("gpt2-small is not")
+                status.includes("has no browser files yet")
                   ? "status-line--error"
                   : ""
               }`}
@@ -241,12 +299,14 @@ export function LLMPlayground() {
             {showGpt2Recovery ? (
               <div className="status-actions stack-gap">
                 <p className="muted mb-0">
-                  <strong>One-time repo setup:</strong> open{" "}
+                  <strong>This tab cannot run GitHub Actions</strong> (there is no deploy secret in the browser). After a maintainer runs{" "}
                   <a href={GPT2_BUNDLE_PUBLISH_WORKFLOW} target="_blank" rel="noreferrer">
                     Publish GPT-2 web bundle
                   </a>{" "}
-                  → <em>Run workflow</em> → when it finishes, run <span className="mono">npm run fetch:gpt2-web</span>, refresh this page, then{" "}
-                  <em>Load model</em>. Or build locally with <span className="mono">npm run prepare:gpt2-web</span> (Python + torch).
+                  once, <em>Load model</em> will pull <span className="mono">gpt2-small</span> from the{" "}
+                  <span className="mono">gpt2-web-v1</span> release when local <span className="mono">public/models/gpt2-small</span> is missing. For
+                  offline dev or if the browser blocks those downloads: <span className="mono">npm run fetch:gpt2-web</span> or{" "}
+                  <span className="mono">npm run prepare:gpt2-web</span>, then restart <span className="mono">npm run dev</span>.
                 </p>
                 <div className="btn-row">
                   <button type="button" className="primary" onClick={switchToTinyGptClear}>
