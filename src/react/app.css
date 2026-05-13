@@ -749,6 +749,8 @@ button.primary:hover:not(:disabled) {
 .exam-slider {
   min-width: 0;
 }
+
+.exam-slider__visually-hidden {
   position: absolute;
   width: 1px;
   height: 1px;
