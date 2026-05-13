@@ -33,8 +33,8 @@ export function LLMPlayground() {
       "2) Tiny model — train: python -m llm.train --data data/training_corpus.txt --device cpu",
       "2b) Bigger corpus: python -m llm.expand_corpus --out data/corpus_expanded.txt --include-local data/training_corpus.txt --hf-preset wikitext-103 ag_news",
       "3) Tiny model — export: python -m llm.export_web --ckpt checkpoints/tiny-gpt/model.pt --tokenizer checkpoints/tiny-gpt/tokenizer.json --out_dir public/models/tiny-gpt",
-      "4) ND GPT-2 in browser — npm run prepare:gpt2-web (wraps python -m llm.prepare_course_model --out_dir public/models/gpt2-small)",
-      "5) Run web: npm run dev — if gpt2-small exists under public/models, the preset switches automatically; press Load model.",
+      "4) ND GPT-2 in browser — after `npm install`, weights download automatically when the gpt2-web-v1 release exists; or run `npm run prepare:gpt2-web` (Python + torch) / `npm run fetch:gpt2-web` to retry the download.",
+      "5) Run web: npm run dev — if gpt2-small is present under public/models, the preset switches automatically; press Load model.",
     ],
     [],
   );
@@ -70,13 +70,13 @@ export function LLMPlayground() {
           );
         } else {
           setStatus(
-            "Only tiny-gpt is checked in. For gpt2-small in the browser: npm run prepare:gpt2-web — refresh — Load model.",
+            "gpt2-small bundle not on disk yet. If `npm install` finished, run GitHub Actions → Publish GPT-2 web bundle (once), then `npm run fetch:gpt2-web`. Or build locally: npm run prepare:gpt2-web — refresh — Load model.",
           );
         }
       } catch {
         if (!cancelled) {
           setStatus(
-            "Could not probe gpt2-small (offline?). Defaulting to tiny-gpt (small char-LM). When online, run npm run prepare:gpt2-web.",
+            "Could not probe gpt2-small (offline?). Defaulting to tiny-gpt. When online: npm run fetch:gpt2-web or npm run prepare:gpt2-web.",
           );
         }
       }
@@ -124,11 +124,11 @@ export function LLMPlayground() {
       const msg = (e as Error).message;
       if (preset === "gpt2-small" && (msg.includes("404") || msg.includes("Failed to fetch"))) {
         setStatus(
-          "gpt2-small bundle missing (404 on public/models/gpt2-small/manifest.json). Run npm run prepare:gpt2-web — wait for files — refresh — Load model. Restart npm run dev if you created the folder while the server was already running. (Same as python -m llm.prepare_course_model --out_dir public/models/gpt2-small.)",
+          "gpt2-small bundle missing (404). Run npm run fetch:gpt2-web (or npm run prepare:gpt2-web with Python + torch). If the release asset is missing, run the repo workflow “Publish GPT-2 web bundle” once, then fetch again. Restart npm run dev if files appeared while the server was running.",
         );
       } else if (preset === "gpt2-small") {
         setStatus(
-          `${msg} If the bundle is missing: npm run prepare:gpt2-web (or python -m llm.prepare_course_model --out_dir public/models/gpt2-small).`,
+          `${msg} If the bundle is missing: npm run fetch:gpt2-web or npm run prepare:gpt2-web.`,
         );
       } else {
         setStatus(msg);

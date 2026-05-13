@@ -1,0 +1,47 @@
+# One-time (or occasional) publish: builds public/models/gpt2-small and uploads
+# gpt2-small-web.tgz to release tag gpt2-web-v1 — used by npm postinstall (scripts/ensure-gpt2-web.mjs).
+name: Publish GPT-2 web bundle
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install CPU torch + deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt
+
+      - name: Export browser bundle
+        run: python -m llm.prepare_course_model --out_dir public/models/gpt2-small
+
+      - name: Pack tarball
+        run: |
+          cd public/models
+          tar czvf gpt2-small-web.tgz gpt2-small
+          ls -lh gpt2-small-web.tgz
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: gpt2-web-v1
+          name: GPT-2 small (browser f32 bundle)
+          body: |
+            Auto-built weights for the Vite app (`public/models/gpt2-small`).
+            Consumed by `npm install` via `scripts/ensure-gpt2-web.mjs`.
+          files: public/models/gpt2-small-web.tgz
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
