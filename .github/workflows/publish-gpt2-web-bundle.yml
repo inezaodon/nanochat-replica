@@ -18,11 +18,10 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install CPU torch + deps
+      - name: Install CPU torch (prepare_course_model only needs torch)
         run: |
           python -m pip install --upgrade pip
           pip install torch --index-url https://download.pytorch.org/whl/cpu
-          pip install -r requirements.txt
 
       - name: Export browser bundle
         run: python -m llm.prepare_course_model --out_dir public/models/gpt2-small

@@ -9,6 +9,10 @@ type ModelPreset = "tiny-gpt" | "gpt2-small";
 
 const GPT2_MANIFEST = "/models/gpt2-small/manifest.json";
 
+/** One-time: GitHub Actions builds the tarball consumed by `npm run fetch:gpt2-web` / postinstall. */
+const GPT2_BUNDLE_PUBLISH_WORKFLOW =
+  "https://github.com/inezaodon/nanochat-replica/actions/workflows/publish-gpt2-web-bundle.yml";
+
 export function LLMPlayground() {
   const [preset, setPreset] = useState<ModelPreset>("tiny-gpt");
   const [prompt, setPrompt] = useState("Hello from a tiny GPT.");
@@ -70,7 +74,7 @@ export function LLMPlayground() {
           );
         } else {
           setStatus(
-            "gpt2-small bundle not on disk yet. If `npm install` finished, run GitHub Actions → Publish GPT-2 web bundle (once), then `npm run fetch:gpt2-web`. Or build locally: npm run prepare:gpt2-web — refresh — Load model.",
+            "gpt2-small not on disk (404). Run the publish workflow once (link below), then npm run fetch:gpt2-web — or npm run prepare:gpt2-web with Python + torch.",
           );
         }
       } catch {
@@ -124,7 +128,7 @@ export function LLMPlayground() {
       const msg = (e as Error).message;
       if (preset === "gpt2-small" && (msg.includes("404") || msg.includes("Failed to fetch"))) {
         setStatus(
-          "gpt2-small bundle missing (404). Run npm run fetch:gpt2-web (or npm run prepare:gpt2-web with Python + torch). If the release asset is missing, run the repo workflow “Publish GPT-2 web bundle” once, then fetch again. Restart npm run dev if files appeared while the server was running.",
+          "gpt2-small bundle missing (404). Follow the steps below, or npm run fetch:gpt2-web / npm run prepare:gpt2-web. Restart npm run dev after files land.",
         );
       } else if (preset === "gpt2-small") {
         setStatus(
@@ -207,7 +211,7 @@ export function LLMPlayground() {
               <label htmlFor="llm-preset">Model bundle</label>
               <select id="llm-preset" value={preset} onChange={(e) => setPreset(e.target.value as ModelPreset)}>
                 <option value="tiny-gpt">tiny-gpt (trained in-repo)</option>
-                <option value="gpt2-small">gpt2-small (ND weights-v1 — run prepare_course_model)</option>
+                <option value="gpt2-small">gpt2-small (ND weights-v1 — ships via release bundle or prepare:gpt2-web)</option>
               </select>
             </div>
             <div className="btn-row">
@@ -235,13 +239,23 @@ export function LLMPlayground() {
               {status}
             </div>
             {showGpt2Recovery ? (
-              <div className="status-actions">
-                <button type="button" className="primary" onClick={switchToTinyGptClear}>
-                  Switch to tiny-gpt &amp; clear error
-                </button>
-                <button type="button" disabled={loading} onClick={loadModel}>
-                  {loading ? "Loading…" : "Load model"}
-                </button>
+              <div className="status-actions stack-gap">
+                <p className="muted mb-0">
+                  <strong>One-time repo setup:</strong> open{" "}
+                  <a href={GPT2_BUNDLE_PUBLISH_WORKFLOW} target="_blank" rel="noreferrer">
+                    Publish GPT-2 web bundle
+                  </a>{" "}
+                  → <em>Run workflow</em> → when it finishes, run <span className="mono">npm run fetch:gpt2-web</span>, refresh this page, then{" "}
+                  <em>Load model</em>. Or build locally with <span className="mono">npm run prepare:gpt2-web</span> (Python + torch).
+                </p>
+                <div className="btn-row">
+                  <button type="button" className="primary" onClick={switchToTinyGptClear}>
+                    Switch to tiny-gpt &amp; clear error
+                  </button>
+                  <button type="button" disabled={loading} onClick={loadModel}>
+                    {loading ? "Loading…" : "Load model"}
+                  </button>
+                </div>
               </div>
             ) : null}
             <div className="field mb-0">
