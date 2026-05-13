@@ -47,9 +47,28 @@ export function Home() {
         </div>
       </section>
 
-      <section className="card" style={{ marginBottom: 22 }} aria-label="Study facts carousel">
+      <section className="card" style={{ marginBottom: 22 }} aria-label="Practice answer key flashcards">
         <div className="cardB">
-          <ExamFactsSlider />
+          <p className="flashcard-decks-lede muted">
+            Two decks from the course keys—each carousel only includes facts from that packet. Click a card to flip
+            between the prompt side and the answer side.
+          </p>
+          <div className="flashcard-decks-grid">
+            <div className="flashcard-deck">
+              <ExamFactsSlider
+                filterSource="exam01"
+                deckTitle="Exam 01 — practice packet (answer key)"
+                deckSubtitle="Facts auto-extracted from the Exam 01 practice answer key."
+              />
+            </div>
+            <div className="flashcard-deck">
+              <ExamFactsSlider
+                filterSource="exam02"
+                deckTitle="Practice Packet 02 — answer key"
+                deckSubtitle="Facts auto-extracted from the Packet 02 answer key PDF."
+              />
+            </div>
+          </div>
         </div>
       </section>
 
@@ -57,20 +76,27 @@ export function Home() {
         <div className="stack-slab" style={{ zIndex: 10 }}>
           <section className="card">
             <div className="cardB">
-              <p className="section-idx">§1 — Data &amp; tokenizer</p>
-              <h2 className="slab-title">Everything starts as bytes, then becomes tokens.</h2>
+              <p className="section-idx">§1 — Corpus and tokenizer</p>
+              <h2 className="slab-title">From raw text to token IDs the trainer and the tab both understand.</h2>
               <p className="slab-lede">
-                A character-level BPE-style tokenizer learns merges from your corpus, exports to JSON, and is shared by
-                the Python trainer and the TypeScript runtime—so training and browser inference stay aligned.
+                You shape a corpus, optionally normalize it, then learn merges (BPE-style or byte-level) straight from
+                that data. Export the vocab and merge table to JSON once: the Python trainer and the TypeScript runtime
+                load the same artifact so optimization in PyTorch and sampling in the browser never disagree on token
+                boundaries.
               </p>
               <ul className="slab-list">
                 <li>
                   <strong>Corpus</strong> — default mix in{" "}
-                  <span className="mono">data/training_corpus.txt</span>; expand with streaming datasets or local files.
+                  <span className="mono">data/training_corpus.txt</span>; swap in course notes, logs, or streamed
+                  sources when you want the model to specialize.
                 </li>
                 <li>
-                  <strong>Vocab</strong> — compact for tiny demos, or GPT-2 scale when you export{" "}
-                  <span className="mono">gpt2-small</span> for the playground.
+                  <strong>Tokenizer</strong> — train merges on your text or import a preset; reuse identical encode/decode
+                  in export scripts and the web bundle.
+                </li>
+                <li>
+                  <strong>Vocab footprint</strong> — keep it tiny for teaching demos, or scale to{" "}
+                  <span className="mono">gpt2-small</span> when you need full GPT-2 behavior in the playground.
                 </li>
               </ul>
             </div>
@@ -83,9 +109,9 @@ export function Home() {
               <p className="section-idx">§2 — Architecture</p>
               <h2 className="slab-title">A GPT-style decoder: embeddings, blocks, language head.</h2>
               <p className="slab-lede">
-                The model follows the familiar stack—token and position embeddings, stacked transformer blocks with
-                multi-head attention and MLP, then a projection to vocabulary logits. Train in PyTorch, run the same graph
-                in the browser.
+                Once tokens are embedded, the model is the familiar stack—token and position embeddings, stacked
+                transformer blocks with multi-head attention and MLP, then a projection to vocabulary logits. Train in
+                PyTorch, run the same graph in the browser.
               </p>
               <ul className="slab-list">
                 <li>
@@ -104,11 +130,12 @@ export function Home() {
         <div className="stack-slab" style={{ zIndex: 12 }}>
           <section className="card">
             <div className="cardB">
-              <p className="section-idx">§3 — Ship to the browser</p>
-              <h2 className="slab-title">Export weights once. Load them from static hosting.</h2>
+              <p className="section-idx">§3 — Export and browser</p>
+              <h2 className="slab-title">Ship weights once, then load them like any other static asset.</h2>
               <p className="slab-lede">
-                The demo loads a flat buffer plus a small manifest—no backend required. Use the tiny checkpoint for
-                teaching, or <span className="mono">prepare_course_model</span> for full GPT-2 behavior in the tab.
+                The playground pulls a flat buffer plus a tiny manifest—no API server in the loop. Bundle the small
+                checkpoint for lectures, or run <span className="mono">prepare_course_model</span> when you want the
+                full GPT-2 stack in the tab.
               </p>
               <div className="grid" style={{ marginTop: 20 }}>
                 <div>
