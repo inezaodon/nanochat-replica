@@ -3,120 +3,129 @@ import React from "react";
 export function Home() {
   return (
     <>
-      <section className="card" style={{ marginBottom: 18 }}>
-        <div className="cardB" style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "center" }}>
-          <div style={{ flex: "1 1 260px", minWidth: 0 }}>
-            <p className="muted" style={{ textTransform: "uppercase", letterSpacing: "0.18em", marginBottom: 6 }}>
-              Small‑scale transformer
-            </p>
-            <h1
-              style={{
-                margin: 0,
-                fontSize: 30,
-                lineHeight: 1.1,
-                letterSpacing: "-0.05em",
-              }}
-            >
-              A tiny GPT you can{" "}
-              <span
-                style={{
-                  background: "linear-gradient(90deg,#38bdf8,#22c55e)",
-                  WebkitBackgroundClip: "text",
-                  color: "transparent",
-                }}
-              >
-                train and run
-              </span>{" "}
-              in your browser.
-            </h1>
-            <p style={{ marginTop: 14, maxWidth: 520 }}>
-              Built from first principles: BPE tokenizer, transformer blocks, and a GPT‑style decoder you train on
-              your own text (default mix in <span className="mono">data/training_corpus.txt</span>), all wrapped in a
-              modern React experience.
-            </p>
-            <ul style={{ marginTop: 14, paddingLeft: 18 }}>
-              <li>
-                <strong>Small LLM tab</strong> – talk to the tiny GPT directly in your browser.
-              </li>
-              <li>
-                <strong>Reproduce locally</strong> – Python training + export scripts are included.
-              </li>
-              <li>
-                <strong>Labs</strong> – original course notebooks are preserved under <em>Course labs</em>.
-              </li>
-            </ul>
-          </div>
-          <div style={{ flex: "0 0 260px", textAlign: "center" }}>
-            <div
-              style={{
-                borderRadius: 18,
-                overflow: "hidden",
-                border: "1px solid rgba(148,163,184,.4)",
-                background:
-                  "radial-gradient(circle at 0 0,rgba(56,189,248,.35),transparent 55%),radial-gradient(circle at 100% 100%,rgba(16,185,129,.35),transparent 55%),#020617",
-              }}
-            >
+      <section className="card card--flush" style={{ marginBottom: 22 }}>
+        <div className="cardB">
+          <div className="hero-grid">
+            <div>
+              <p className="hero-kicker">Small-scale transformer</p>
+              <h1 className="hero-title">
+                A tiny GPT you can <span className="gradient-text">train and run</span> in your browser.
+              </h1>
+              <p className="hero-lede">
+                Built from first principles: BPE tokenizer, transformer blocks, and a GPT-style decoder you train on your
+                own text (default mix in <span className="mono">data/training_corpus.txt</span>), wrapped in a focused
+                React playground.
+              </p>
+              <ul className="hero-list">
+                <li>
+                  <strong>Small LLM</strong> — load weights and sample entirely in the browser.
+                </li>
+                <li>
+                  <strong>Reproduce locally</strong> — Python training and export scripts ship with the repo.
+                </li>
+                <li>
+                  <strong>Three.js lab</strong> —{" "}
+                  <a href="#/three">orbiting 3D scene</a> (tone-mapped lighting, orbit controls).
+                </li>
+                <li>
+                  <strong>Labs</strong> — static course exports live under <em>Course labs</em>.
+                </li>
+              </ul>
+            </div>
+            <figure className="media-card">
               <img
                 src="https://images.unsplash.com/photo-1529101091764-c3526daf38fe?auto=format&fit=crop&w=900&q=80"
-                alt="Abstract visualization of a neural network"
-                style={{ width: "100%", height: 180, objectFit: "cover", display: "block" }}
+                alt="Abstract visualization suggesting neural computation"
+                width={600}
+                height={376}
+                loading="lazy"
               />
-              <div style={{ padding: "10px 12px 12px" }}>
-                <p style={{ margin: 0, fontSize: 12 }} className="muted">
-                  Tiny GPT with 2 layers · 12 heads · BPE tokenizer
-                </p>
-              </div>
-            </div>
+              <figcaption>Tiny LM stack · tokenizer · decoder · browser inference</figcaption>
+            </figure>
           </div>
         </div>
       </section>
 
-      <div className="grid">
-        <section className="card">
-          <div className="cardH">
-            <h2>What’s inside</h2>
-            <div className="muted">Architecture</div>
-          </div>
-          <div className="cardB">
-            <ul>
-              <li>
-                <strong>Tokenizer</strong>: Character‑level “BPE” tokenizer trained on your corpus, exported to JSON
-                and shared between Python and TypeScript.
-              </li>
-              <li>
-                <strong>Model</strong>: GPT‑style decoder (embedding + positional + transformer blocks + lm_head) with
-                12‑head attention.
-              </li>
-              <li>
-                <strong>Inference</strong>: Pure TypeScript forward pass and sampling, running entirely in the browser.
-              </li>
-            </ul>
-          </div>
-        </section>
+      <div className="sticky-stack" aria-label="Deep dive sections">
+        <div className="stack-slab" style={{ zIndex: 10 }}>
+          <section className="card">
+            <div className="cardB">
+              <p className="section-idx">§1 — Data &amp; tokenizer</p>
+              <h2 className="slab-title">Everything starts as bytes, then becomes tokens.</h2>
+              <p className="slab-lede">
+                A character-level BPE-style tokenizer learns merges from your corpus, exports to JSON, and is shared by
+                the Python trainer and the TypeScript runtime—so training and browser inference stay aligned.
+              </p>
+              <ul className="slab-list">
+                <li>
+                  <strong>Corpus</strong> — default mix in{" "}
+                  <span className="mono">data/training_corpus.txt</span>; expand with streaming datasets or local files.
+                </li>
+                <li>
+                  <strong>Vocab</strong> — compact for tiny demos, or GPT-2 scale when you export{" "}
+                  <span className="mono">gpt2-small</span> for the playground.
+                </li>
+              </ul>
+            </div>
+          </section>
+        </div>
 
-        <section className="card">
-          <div className="cardH">
-            <h2>Quickstart</h2>
-            <div className="muted">Run + retrain</div>
-          </div>
-          <div className="cardB">
-            <div className="mono" style={{ fontSize: 12 }}>
-              <div># web demo</div>
-              <div>npm install</div>
-              <div>npm run dev</div>
+        <div className="stack-slab" style={{ zIndex: 11 }}>
+          <section className="card">
+            <div className="cardB">
+              <p className="section-idx">§2 — Architecture</p>
+              <h2 className="slab-title">A GPT-style decoder: embeddings, blocks, language head.</h2>
+              <p className="slab-lede">
+                The model follows the familiar stack—token and position embeddings, stacked transformer blocks with
+                multi-head attention and MLP, then a projection to vocabulary logits. Train in PyTorch, run the same graph
+                in the browser.
+              </p>
+              <ul className="slab-list">
+                <li>
+                  <strong>Attention</strong> — SDPA-style paths where available, with a manual
+                  fallback for portability.
+                </li>
+                <li>
+                  <strong>Sampling</strong> — temperature and top‑k in TypeScript over the live
+                  logits stream.
+                </li>
+              </ul>
             </div>
-            <div style={{ height: 10 }} />
-            <div className="mono" style={{ fontSize: 12 }}>
-              <div># train tiny GPT</div>
-              <div>python -m venv .venv</div>
-              <div>source .venv/bin/activate</div>
-              <div>pip install -r requirements.txt</div>
-              <div>python -m llm.train --device cpu</div>
+          </section>
+        </div>
+
+        <div className="stack-slab" style={{ zIndex: 12 }}>
+          <section className="card">
+            <div className="cardB">
+              <p className="section-idx">§3 — Ship to the browser</p>
+              <h2 className="slab-title">Export weights once. Load them from static hosting.</h2>
+              <p className="slab-lede">
+                The demo loads a flat buffer plus a small manifest—no backend required. Use the tiny checkpoint for
+                teaching, or <span className="mono">prepare_course_model</span> for full GPT-2 behavior in the tab.
+              </p>
+              <div className="grid" style={{ marginTop: 20 }}>
+                <div>
+                  <div className="field-label">Web</div>
+                  <div className="mono">
+                    <div>npm install</div>
+                    <div>npm run dev</div>
+                  </div>
+                </div>
+                <div>
+                  <div className="field-label">Train</div>
+                  <div className="mono">
+                    <div>python -m llm.train --device cpu</div>
+                    <div>python -m llm.export_web …</div>
+                  </div>
+                </div>
+              </div>
+              <p className="muted" style={{ marginTop: 18, marginBottom: 0, fontSize: 14 }}>
+                Open <a href="#/llm">Small LLM</a> when you are ready to load a bundle and sample.
+              </p>
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
     </>
   );
 }
-
