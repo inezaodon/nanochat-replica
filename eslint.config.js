@@ -13,5 +13,20 @@ export default [
       sourceType: "module",
     },
   },
+  {
+    files: ["scripts/**/*.mjs", "scripts/**/*.cjs", "scripts/**/*.js"],
+    languageOptions: {
+      globals: {
+        Buffer: "readonly",
+        __dirname: "readonly",
+        __filename: "readonly",
+        console: "readonly",
+        fetch: "readonly",
+        process: "readonly",
+        setImmediate: "readonly",
+        clearImmediate: "readonly",
+      },
+    },
+  },
 ];
 
