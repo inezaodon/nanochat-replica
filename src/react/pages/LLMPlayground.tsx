@@ -21,6 +21,14 @@ const GPT2_BUNDLE_PUBLISH_WORKFLOW =
 
 const GPT2_FAIL_PREFIX = "[gpt2-small]";
 
+function isLargeBrowserModel(manifest: { config: { vocab_size: number; n_embd: number } }): boolean {
+  return manifest.config.vocab_size >= 4096 || manifest.config.n_embd >= 256;
+}
+
+function yieldToMain(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 export function LLMPlayground() {
   const [preset, setPreset] = useState<ModelPreset>("tiny-gpt");
   const [prompt, setPrompt] = useState("Hello from a tiny GPT.");
@@ -29,6 +37,8 @@ export function LLMPlayground() {
   const [model, setModel] = useState<TinyGPTWeb | null>(null);
   const gpt2TokenizerRef = useRef<Gpt2TiktokenTokenizer | null>(null);
   const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const generateAbortRef = useRef<AbortController | null>(null);
   const [maxNewTokens, setMaxNewTokens] = useState(60);
   const [temperature, setTemperature] = useState(0.9);
   const [topK, setTopK] = useState(40);
@@ -107,6 +117,7 @@ export function LLMPlayground() {
     })();
     return () => {
       cancelled = true;
+      generateAbortRef.current?.abort();
       gpt2TokenizerRef.current?.free();
       gpt2TokenizerRef.current = null;
     };
@@ -138,10 +149,16 @@ export function LLMPlayground() {
         } else {
           tokenizer = RegexBPETokenizer.fromJSON(tokObj);
         }
+        setStatus("Downloading / reading weights…");
+        await yieldToMain();
         const buf = await fetchArrayBuffer(`${base}/${manifest.weights}`);
+        setStatus("Mapping weight buffer (may pause briefly)…");
+        await yieldToMain();
         const tensors = loadTensors(buf, manifest);
+        await yieldToMain();
         const m = createTinyGPTWeb(manifest, tokenizer, tensors);
         setModel(m);
+        if (isLargeBrowserModel(manifest)) setMaxNewTokens((n) => Math.min(n, 20));
         setStatus(
           `Loaded ${preset}: vocab=${manifest.config.vocab_size}, layers=${manifest.config.n_layer}, heads=${manifest.config.n_head}, embd=${manifest.config.n_embd}`,
         );
@@ -178,12 +195,20 @@ export function LLMPlayground() {
         tokenizer = RegexBPETokenizer.fromJSON(tokObj);
       }
 
+      setStatus(
+        `Downloading weights (~500MB f32)${sourceNote} — tab may look frozen until this finishes…`,
+      );
+      await yieldToMain();
       const buf = await fetchArrayBuffer(weightsUrl);
+      setStatus("Mapping weight buffer into tensors (may pause 10–30s)…");
+      await yieldToMain();
       const tensors = loadTensors(buf, manifest);
+      await yieldToMain();
       const m = createTinyGPTWeb(manifest, tokenizer, tensors);
       setModel(m);
+      setMaxNewTokens((n) => Math.min(n, 20));
       setStatus(
-        `Loaded gpt2-small${sourceNote}: vocab=${manifest.config.vocab_size}, layers=${manifest.config.n_layer}, heads=${manifest.config.n_head}, embd=${manifest.config.n_embd}`,
+        `Loaded gpt2-small${sourceNote}: vocab=${manifest.config.vocab_size}, layers=${manifest.config.n_layer}, heads=${manifest.config.n_head}, embd=${manifest.config.n_embd}. Use ≤20 new tokens per click — full GPT-2 in JS is slow.`,
       );
     } catch (e) {
       const msg = (e as Error).message;
@@ -200,20 +225,64 @@ export function LLMPlayground() {
     }
   }
 
-  function generate() {
+  const busy = loading || generating;
+  const isGpt2Loaded = model !== null && isLargeBrowserModel(model.manifest);
+  const maxTokensCap = isGpt2Loaded || preset === "gpt2-small" ? 32 : 512;
+
+  async function generate() {
     if (!model) {
       setStatus("Load the model first.");
       return;
     }
-    setStatus("Generating…");
-    const text = model.generate(prompt, { maxNewTokens, temperature, topK, seed });
-    setOut(text);
-    const cfg = model.manifest.config;
-    const toy =
-      cfg.vocab_size < 4096 || cfg.n_embd < 256
-        ? " (Toy character-scale model — fluent English is not expected. Use gpt2-small preset after `prepare_course_model` for GPT-2.)"
-        : "";
-    setStatus(`Done.${toy}`);
+    generateAbortRef.current?.abort();
+    const ac = new AbortController();
+    generateAbortRef.current = ac;
+    setGenerating(true);
+    const cap = Math.min(maxNewTokens, maxTokensCap);
+    const large = isLargeBrowserModel(model.manifest);
+    setStatus(
+      large
+        ? `Generating (0/${cap}) — gpt2-small in plain JS; each token can take several seconds…`
+        : `Generating (0/${cap})…`,
+    );
+    try {
+      const text = await model.generateAsync(
+        prompt,
+        { maxNewTokens: cap, temperature, topK, seed },
+        {
+          signal: ac.signal,
+          onProgress: (step, max) => {
+            setStatus(
+              large
+                ? `Generating (${step}/${max}) — keep this tab open; closing cancels…`
+                : `Generating (${step}/${max})…`,
+            );
+          },
+        },
+      );
+      setOut(text);
+      const cfg = model.manifest.config;
+      const toy =
+        cfg.vocab_size < 4096 || cfg.n_embd < 256
+          ? " (Toy character-scale model — fluent English is not expected. Use gpt2-small for full GPT-2.)"
+          : large
+            ? " (gpt2-small runs entirely in the browser — use fewer tokens if this felt slow.)"
+            : "";
+      setStatus(`Done.${toy}`);
+    } catch (e) {
+      if ((e as Error).name === "AbortError") {
+        setStatus("Generation cancelled.");
+      } else {
+        setStatus((e as Error).message);
+      }
+    } finally {
+      setGenerating(false);
+      generateAbortRef.current = null;
+    }
+  }
+
+  function cancelGenerate() {
+    generateAbortRef.current?.abort();
   }
 
   return (
@@ -237,7 +306,7 @@ export function LLMPlayground() {
                   type="number"
                   value={maxNewTokens}
                   min={1}
-                  max={512}
+                  max={maxTokensCap}
                   onChange={(e) => setMaxNewTokens(Number(e.target.value))}
                 />
               </div>
@@ -272,10 +341,15 @@ export function LLMPlayground() {
               </select>
             </div>
             <div className="btn-row">
-              <button type="button" className="primary" disabled={loading} onClick={generate}>
-                Generate
+              <button type="button" className="primary" disabled={busy} onClick={generate}>
+                {generating ? "Generating…" : "Generate"}
               </button>
-              <button type="button" disabled={loading} onClick={loadModel}>
+              {generating ? (
+                <button type="button" onClick={cancelGenerate}>
+                  Cancel
+                </button>
+              ) : null}
+              <button type="button" disabled={busy} onClick={loadModel}>
                 {loading ? "Loading…" : "Load model"}
               </button>
               <button type="button" onClick={() => setPrompt("")}>
@@ -312,7 +386,7 @@ export function LLMPlayground() {
                   <button type="button" className="primary" onClick={switchToTinyGptClear}>
                     Switch to tiny-gpt &amp; clear error
                   </button>
-                  <button type="button" disabled={loading} onClick={loadModel}>
+                  <button type="button" disabled={busy} onClick={loadModel}>
                     {loading ? "Loading…" : "Load model"}
                   </button>
                 </div>
