@@ -273,7 +273,7 @@ export function LLMPlayground() {
     <div className="play-layout play-layout--solo stack-gap">
         <section ref={revealMain.ref} className={`card lift-reveal ${revealMain.active ? "is-visible" : ""}`}>
           <div className="cardH">
-            <h2>In-browser inference</h2>
+            <h2>GPT demo</h2>
             <div className="cardH-meta">Load weights, tune sampling, stream tokens into the output pane.</div>
           </div>
           <div className="cardB stack-gap">

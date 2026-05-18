@@ -8,6 +8,10 @@ export function Landing() {
 
   return (
     <>
+      <p className="landing-intro">
+        A course companion for building and running small GPT-style models in the browser—labs, exam flashcards, an
+        interactive demo, and notes on how tokenization, transformers, and export fit together.
+      </p>
       <section ref={ref} className={`card home-section lift-reveal ${active ? "is-visible" : ""}`}>
         <div className="cardH">
           <h2>Course labs</h2>

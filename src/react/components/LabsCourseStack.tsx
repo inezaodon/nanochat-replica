@@ -132,7 +132,7 @@ export function LabsCourseStack({ showFootnote = true }: { showFootnote?: boolea
         </div>
       {showFootnote ? (
         <p className="muted doc-footnote">
-          Interactive training and browser inference live under <a href="#/overview">Overview</a>. The{" "}
+          Interactive training and browser inference live under <a href="#/overview">GPT demo</a>. The{" "}
           <a href="#/three">Three.js lab</a> is a separate spatial demo for teaching, not a graded lab export.
         </p>
       ) : null}

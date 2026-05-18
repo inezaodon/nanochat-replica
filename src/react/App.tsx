@@ -57,7 +57,7 @@ export function App() {
           </div>
           <nav className="nav-links" aria-label="Primary">
             <NavLink to="home" label="Home" />
-            <NavLink to="overview" label="Overview" />
+            <NavLink to="overview" label="GPT DEMO" />
             <NavLink to="architecture" label="Architecture" />
             <NavLink to="three" label="Three.js" />
           </nav>
