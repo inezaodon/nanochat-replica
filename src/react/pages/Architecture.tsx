@@ -1,10 +1,28 @@
-import React from "react";
-import { ExamFactsSlider } from "../components/ExamFactsSlider";
+import React, { useMemo, useState } from "react";
+import { useReveal } from "../hooks/useReveal";
 
-export function Home() {
+export function Architecture() {
+  const revealHow = useReveal();
+  const revealPipe = useReveal();
+  const [showDiagramFallback, setShowDiagramFallback] = useState(false);
+
+  const help = useMemo(
+    () => [
+
+      "1) Install deps: pip install -r requirements.txt && npm install",
+      "2) Tiny model — train: python -m llm.train --data data/training_corpus.txt --device cpu",
+      "2b) Bigger corpus: python -m llm.expand_corpus --out data/corpus_expanded.txt --include-local data/training_corpus.txt --hf-preset wikitext-103 ag_news",
+      "3) Tiny model — export: python -m llm.export_web --ckpt checkpoints/tiny-gpt/model.pt --tokenizer checkpoints/tiny-gpt/tokenizer.json --out_dir public/models/tiny-gpt",
+      "4) ND GPT-2 — maintainer runs Actions → Publish GPT-2 web bundle once (release gpt2-web-v1). Then Load model loads from disk or, if missing, straight from that release in the browser (large download).",
+      "5) Run web: npm run dev — gpt2-small preset auto-selects when local or release files exist; press Load model.",
+    
+    ],
+    [],
+  );
+
   return (
     <>
-      <section className="card card--flush home-section">
+<section className="card card--flush home-section">
         <div className="cardB">
           <div className="hero-grid">
             <div>
@@ -19,7 +37,7 @@ export function Home() {
               </p>
               <ul className="hero-list">
                 <li>
-                  <strong>Small LLM</strong> — load weights and sample entirely in the browser.
+                  <strong>Overview</strong> — load weights and sample entirely in the browser.
                 </li>
                 <li>
                   <strong>Reproduce locally</strong> — Python training and export scripts ship with the repo.
@@ -29,7 +47,10 @@ export function Home() {
                   <a href="#/three">orbiting 3D scene</a> (tone-mapped lighting, orbit controls).
                 </li>
                 <li>
-                  <strong>Labs</strong> — static course exports live under <em>Course labs</em>.
+                  <strong>Labs &amp; flashcards</strong> — on <a href="#/">Home</a>.
+                </li>
+                <li>
+                  <strong>Architecture</strong> — how the stack works (this page).
                 </li>
               </ul>
             </div>
@@ -46,37 +67,7 @@ export function Home() {
           </div>
         </div>
       </section>
-
-      <section className="card home-section" aria-label="Practice answer key flashcards">
-        <div className="cardH">
-          <h2>Practice flashcards</h2>
-          <div className="cardH-meta">Answer keys · flip or step through cards</div>
-        </div>
-        <div className="cardB">
-          <p className="flashcard-decks-lede muted">
-            Two decks from the course keys—each carousel only includes facts from that packet. Click a card to flip
-            between the prompt side and the answer side.
-          </p>
-          <div className="flashcard-decks-grid">
-            <div className="flashcard-deck">
-              <ExamFactsSlider
-                filterSource="exam01"
-                deckTitle="Exam 01 — practice packet (answer key)"
-                deckSubtitle="Facts auto-extracted from the Exam 01 practice answer key."
-              />
-            </div>
-            <div className="flashcard-deck">
-              <ExamFactsSlider
-                filterSource="exam02"
-                deckTitle="Practice Packet 02 — answer key"
-                deckSubtitle="Facts auto-extracted from the Packet 02 answer key PDF."
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div className="sticky-stack" aria-label="Deep dive sections">
+<div className="sticky-stack" aria-label="Deep dive sections">
         <div className="stack-slab">
           <section className="card">
             <div className="cardB">
@@ -158,11 +149,65 @@ export function Home() {
                 </div>
               </div>
               <p className="muted" style={{ marginTop: 18, marginBottom: 0, fontSize: 14 }}>
-                Open <a href="#/llm">Small LLM</a> when you are ready to load a bundle and sample.
+                Open <a href="#/overview">Overview</a> when you are ready to load a bundle and sample.
               </p>
             </div>
           </section>
         </div>
+      </div>
+
+      <div className="arch-ref-grid">
+        <section ref={revealHow.ref} className={`card lift-reveal ${revealHow.active ? "is-visible" : ""}`}>
+          <div className="cardH">
+            <h2>How it works</h2>
+            <div className="cardH-meta">Sampling loop</div>
+          </div>
+          <div className="cardB stack-gap">
+            <p className="muted mb-0">
+              Each step appends one token: forward pass → logits → temperature / top‑k → sample → extend context.
+            </p>
+            <div className="diagram-frame">
+              {!showDiagramFallback ? (
+                <img
+                  src="https://jalammar.github.io/images/t/transformer_decoding_3.gif"
+                  alt="Transformer decoding tokens one at a time"
+                  loading="lazy"
+                  onError={() => setShowDiagramFallback(true)}
+                />
+              ) : (
+                <div className="mono diagram-fallback">
+                  prompt → tokenizer → token IDs → transformer → logits → top‑k / temperature → next token → repeat
+                </div>
+              )}
+            </div>
+            <ul className="how-list">
+              <li>
+                <strong>Context</strong> — effective window is the bundle&apos;s <span className="mono">block_size</span> 
+                (128 tiny-gpt, 1024 gpt2-small); max new tokens caps continuation length.
+              </li>
+              <li>
+                <strong>Controls</strong> — higher temperature adds randomness; top‑k trims the tail of the distribution.
+              </li>
+              <li>
+                <strong>Seed</strong> — fixed seed makes runs reproducible for teaching and demos.
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section ref={revealPipe.ref} className={`card lift-reveal ${revealPipe.active ? "is-visible" : ""}`}>
+          <div className="cardH">
+            <h2>Pipeline</h2>
+            <div className="cardH-meta">From corpus to browser</div>
+          </div>
+          <div className="cardB">
+            <div className="mono pipeline">
+              {help.map((x) => (
+                <div key={x}>{x}</div>
+              ))}
+            </div>
+          </div>
+        </section>
       </div>
     </>
   );

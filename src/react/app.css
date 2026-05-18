@@ -429,9 +429,27 @@ button.primary:hover:not(:disabled) {
   align-items: start;
 }
 
+.play-layout--solo {
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+}
+
+.arch-ref-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  margin-top: 10px;
+}
+
 @media (min-width: 1080px) {
-  .play-layout {
+  .play-layout:not(.play-layout--solo) {
     grid-template-columns: minmax(0, 1fr) 360px;
+  }
+
+  .arch-ref-grid {
+    grid-template-columns: minmax(0, 1fr) 360px;
+    align-items: start;
   }
 }
 

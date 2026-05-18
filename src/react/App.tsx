@@ -1,19 +1,19 @@
 import React, { Suspense, useEffect, useMemo, useState } from "react";
 import "./app.css";
-import { Home } from "./pages/Home";
+import { Landing } from "./pages/Landing";
 import { LLMPlayground } from "./pages/LLMPlayground";
-import { LabsDocs } from "./pages/LabsDocs";
-
+import { Architecture } from "./pages/Architecture";
 const ThreePlayground = React.lazy(async () => {
   const m = await import("./pages/ThreePlayground");
   return { default: m.ThreePlayground };
 });
 
-type Route = "home" | "llm" | "docs" | "three";
+type Route = "home" | "overview" | "architecture" | "three" | "docs" | "llm";
 
 function routeFromHash(): Route {
   const h = (location.hash || "").replace(/^#\/?/, "");
-  if (h === "llm") return "llm";
+  if (h === "overview" || h === "llm") return "overview";
+  if (h === "architecture") return "architecture";
   if (h === "docs") return "docs";
   if (h === "three") return "three";
   return "home";
@@ -35,8 +35,10 @@ export function App() {
   const NavLink = useMemo(
     () =>
       function NavLink({ to, label }: { to: Route; label: string }) {
-        const active = route === to;
-        const href = to === "home" ? "#/" : `#/${to}`;
+        const active =
+          route === to || (to === "overview" && route === "llm") || (to === "home" && route === "docs");
+        const href =
+          to === "home" ? "#/" : to === "overview" ? "#/overview" : to === "docs" ? "#/" : `#/${to}`;
         return (
           <a className={`pill ${active ? "active" : ""}`} href={href}>
             {label}
@@ -54,17 +56,17 @@ export function App() {
             nanochat<span className="brand-accent">.replica</span>
           </div>
           <nav className="nav-links" aria-label="Primary">
-            <NavLink to="home" label="Overview" />
-            <NavLink to="llm" label="Small LLM" />
-            <NavLink to="docs" label="Course labs" />
+            <NavLink to="home" label="Home" />
+            <NavLink to="overview" label="Overview" />
+            <NavLink to="architecture" label="Architecture" />
             <NavLink to="three" label="Three.js" />
           </nav>
         </div>
       </header>
       <div className="wrap">
-        {route === "home" && <Home />}
-        {route === "llm" && <LLMPlayground />}
-        {route === "docs" && <LabsDocs />}
+        {(route === "home" || route === "docs") && <Landing />}
+        {route === "overview" && <LLMPlayground />}
+        {route === "architecture" && <Architecture />}
         {route === "three" && (
           <Suspense
             fallback={

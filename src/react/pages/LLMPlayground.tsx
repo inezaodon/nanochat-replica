@@ -43,23 +43,7 @@ export function LLMPlayground() {
   const [temperature, setTemperature] = useState(0.9);
   const [topK, setTopK] = useState(40);
   const [seed, setSeed] = useState(42);
-  const [showDiagramFallback, setShowDiagramFallback] = useState(false);
-
   const revealMain = useReveal();
-  const revealHow = useReveal();
-  const revealPipe = useReveal();
-
-  const help = useMemo(
-    () => [
-      "1) Install deps: pip install -r requirements.txt && npm install",
-      "2) Tiny model — train: python -m llm.train --data data/training_corpus.txt --device cpu",
-      "2b) Bigger corpus: python -m llm.expand_corpus --out data/corpus_expanded.txt --include-local data/training_corpus.txt --hf-preset wikitext-103 ag_news",
-      "3) Tiny model — export: python -m llm.export_web --ckpt checkpoints/tiny-gpt/model.pt --tokenizer checkpoints/tiny-gpt/tokenizer.json --out_dir public/models/tiny-gpt",
-      "4) ND GPT-2 — maintainer runs Actions → Publish GPT-2 web bundle once (release gpt2-web-v1). Then Load model loads from disk or, if missing, straight from that release in the browser (large download).",
-      "5) Run web: npm run dev — gpt2-small preset auto-selects when local or release files exist; press Load model.",
-    ],
-    [],
-  );
 
   const showGpt2Recovery = useMemo(() => {
     if (preset !== "gpt2-small") return false;
@@ -286,8 +270,7 @@ export function LLMPlayground() {
   }
 
   return (
-    <div className="play-layout">
-      <div className="play-main stack-gap">
+    <div className="play-layout play-layout--solo stack-gap">
         <section ref={revealMain.ref} className={`card lift-reveal ${revealMain.active ? "is-visible" : ""}`}>
           <div className="cardH">
             <h2>In-browser inference</h2>
@@ -398,61 +381,11 @@ export function LLMPlayground() {
             </div>
           </div>
         </section>
-      </div>
 
-      <aside className="play-aside" aria-label="Reference">
-        <section ref={revealHow.ref} className={`card lift-reveal ${revealHow.active ? "is-visible" : ""}`}>
-          <div className="cardH">
-            <h2>How it works</h2>
-            <div className="cardH-meta">Sampling loop</div>
-          </div>
-          <div className="cardB stack-gap">
-            <p className="muted mb-0">
-              Each step appends one token: forward pass → logits → temperature / top‑k → sample → extend context.
-            </p>
-            <div className="diagram-frame">
-              {!showDiagramFallback ? (
-                <img
-                  src="https://jalammar.github.io/images/t/transformer_decoding_3.gif"
-                  alt="Transformer decoding tokens one at a time"
-                  loading="lazy"
-                  onError={() => setShowDiagramFallback(true)}
-                />
-              ) : (
-                <div className="mono diagram-fallback">
-                  prompt → tokenizer → token IDs → transformer → logits → top‑k / temperature → next token → repeat
-                </div>
-              )}
-            </div>
-            <ul className="how-list">
-              <li>
-                <strong>Context</strong> — effective window is the bundle&apos;s <span className="mono">block_size</span>{" "}
-                (128 tiny-gpt, 1024 gpt2-small); max new tokens caps continuation length.
-              </li>
-              <li>
-                <strong>Controls</strong> — higher temperature adds randomness; top‑k trims the tail of the distribution.
-              </li>
-              <li>
-                <strong>Seed</strong> — fixed seed makes runs reproducible for teaching and demos.
-              </li>
-            </ul>
-          </div>
-        </section>
-
-        <section ref={revealPipe.ref} className={`card lift-reveal ${revealPipe.active ? "is-visible" : ""}`}>
-          <div className="cardH">
-            <h2>Pipeline</h2>
-            <div className="cardH-meta">From corpus to browser</div>
-          </div>
-          <div className="cardB">
-            <div className="mono pipeline">
-              {help.map((x) => (
-                <div key={x}>{x}</div>
-              ))}
-            </div>
-          </div>
-        </section>
-      </aside>
+      <p className="muted mb-0" style={{ fontSize: 14 }}>
+        How the model works and the train/export pipeline are on{" "}
+        <a href="#/architecture">Architecture</a>.
+      </p>
     </div>
   );
 }
