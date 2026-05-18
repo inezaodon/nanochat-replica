@@ -99,11 +99,6 @@ function addInPlace(a: Float32Array, b: Float32Array) {
   for (let i = 0; i < a.length; i++) a[i] += b[i];
 }
 
-function addRowInPlace(mat: Float32Array, cols: number, row: number, delta: Float32Array) {
-  const off = row * cols;
-  for (let i = 0; i < cols; i++) mat[off + i] += delta[i];
-}
-
 function yieldToMain(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
@@ -185,10 +180,8 @@ export function createTinyGPTWeb(manifest: WebManifest, tokenizer: TextTokenizer
   const { n_layer, n_head, n_embd, block_size, vocab_size } = cfg;
   const headDim = n_embd / n_head;
 
-  /** When `onlyLast`, compute logits for the final context position only (autoregressive decode). */
-  function forward(ids: number[], onlyLast = false): Float32Array {
+  function forward(ids: number[]): Float32Array {
     const T = Math.min(ids.length, block_size);
-    const lastIdx = T - 1;
     const X = new Float32Array(T * n_embd);
 
     // embeddings
@@ -238,10 +231,8 @@ export function createTinyGPTWeb(manifest: WebManifest, tokenizer: TextTokenizer
 
       const attOut = new Float32Array(T * n_embd);
       const scores = new Float32Array(T);
-      const attnStart = onlyLast ? lastIdx : 0;
-      const attnEnd = onlyLast ? lastIdx + 1 : T;
       for (let h = 0; h < n_head; h++) {
-        for (let i = attnStart; i < attnEnd; i++) {
+        for (let i = 0; i < T; i++) {
           for (let j = 0; j < T; j++) {
             if (j > i) {
               scores[j] = -1e9;
@@ -268,25 +259,16 @@ export function createTinyGPTWeb(manifest: WebManifest, tokenizer: TextTokenizer
       }
 
       const y = new Float32Array(n_embd);
-      if (onlyLast) {
-        const x = takeRow(attOut, n_embd, lastIdx);
+      const projOut = new Float32Array(T * n_embd);
+      for (let t = 0; t < T; t++) {
+        const x = takeRow(attOut, n_embd, t);
         matmulVec(y, projW, n_embd, x);
         if (projB) {
           for (let i = 0; i < n_embd; i++) y[i] += projB[i];
         }
-        addRowInPlace(X, n_embd, lastIdx, y);
-      } else {
-        const projOut = new Float32Array(T * n_embd);
-        for (let t = 0; t < T; t++) {
-          const x = takeRow(attOut, n_embd, t);
-          matmulVec(y, projW, n_embd, x);
-          if (projB) {
-            for (let i = 0; i < n_embd; i++) y[i] += projB[i];
-          }
-          setRow(projOut, n_embd, t, y);
-        }
-        addInPlace(X, projOut);
+        setRow(projOut, n_embd, t, y);
       }
+      addInPlace(X, projOut);
 
       const ln2w = tensors[`blocks.${l}.ln2.weight`];
       const ln2b = tensors[`blocks.${l}.ln2.bias`];
@@ -297,11 +279,17 @@ export function createTinyGPTWeb(manifest: WebManifest, tokenizer: TextTokenizer
       const hid = new Float32Array(4 * n_embd);
       const out = new Float32Array(n_embd);
 
-      if (onlyLast) {
-        const row = takeRow(X, n_embd, lastIdx);
+      const Xn2 = new Float32Array(T * n_embd);
+      for (let t = 0; t < T; t++) {
+        const row = takeRow(X, n_embd, t);
         const z = layerNorm(row);
         for (let i = 0; i < n_embd; i++) z[i] = z[i] * ln2w[i] + ln2b[i];
-        matmulVec(hid, fcW, n_embd, z);
+        setRow(Xn2, n_embd, t, z);
+      }
+      const mlpOut = new Float32Array(T * n_embd);
+      for (let t = 0; t < T; t++) {
+        const x = takeRow(Xn2, n_embd, t);
+        matmulVec(hid, fcW, n_embd, x);
         if (fcB) {
           for (let i = 0; i < hid.length; i++) hid[i] += fcB[i];
         }
@@ -310,31 +298,9 @@ export function createTinyGPTWeb(manifest: WebManifest, tokenizer: TextTokenizer
         if (prB) {
           for (let i = 0; i < n_embd; i++) out[i] += prB[i];
         }
-        addRowInPlace(X, n_embd, lastIdx, out);
-      } else {
-        const Xn2 = new Float32Array(T * n_embd);
-        for (let t = 0; t < T; t++) {
-          const row = takeRow(X, n_embd, t);
-          const z = layerNorm(row);
-          for (let i = 0; i < n_embd; i++) z[i] = z[i] * ln2w[i] + ln2b[i];
-          setRow(Xn2, n_embd, t, z);
-        }
-        const mlpOut = new Float32Array(T * n_embd);
-        for (let t = 0; t < T; t++) {
-          const x = takeRow(Xn2, n_embd, t);
-          matmulVec(hid, fcW, n_embd, x);
-          if (fcB) {
-            for (let i = 0; i < hid.length; i++) hid[i] += fcB[i];
-          }
-          for (let i = 0; i < hid.length; i++) hid[i] = gelu(hid[i]);
-          matmulVec(out, prW, 4 * n_embd, hid);
-          if (prB) {
-            for (let i = 0; i < n_embd; i++) out[i] += prB[i];
-          }
-          setRow(mlpOut, n_embd, t, out);
-        }
-        addInPlace(X, mlpOut);
+        setRow(mlpOut, n_embd, t, out);
       }
+      addInPlace(X, mlpOut);
     }
 
     // final ln + head
@@ -358,7 +324,7 @@ export function createTinyGPTWeb(manifest: WebManifest, tokenizer: TextTokenizer
   function decodeStep(ids: number[], rng: () => number, opts: GenerateOpts): number {
     const from = Math.max(0, ids.length - block_size);
     const ctx = from === 0 ? ids : ids.slice(from);
-    const logits = forward(ctx, true);
+    const logits = forward(ctx);
     return sampleFromLogits(logits, opts.temperature, opts.topK, rng);
   }
 
