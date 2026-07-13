@@ -3,7 +3,7 @@ import { Gpt2TiktokenTokenizer } from "../../core/gpt2Tokenizer";
 import { RegexBPETokenizer } from "../../core/tokenizer";
 import { createTinyGPTWeb, loadTensors, TinyGPTWeb } from "../../core/inferTinyGPT";
 import { fetchArrayBuffer, fetchJSON, WebManifest } from "../../core/webModel";
-import { GPT2_RELEASE_FLAT, gpt2ReleaseFlatReachable } from "../config/gpt2Release";
+import { gpt2BundleReachable, gpt2ModelUrls } from "../config/gpt2Release";
 import { useReveal } from "../hooks/useReveal";
 
 type ModelPreset = "tiny-gpt" | "gpt2-small";
@@ -68,22 +68,22 @@ export function LLMPlayground() {
     let cancelled = false;
     (async () => {
       try {
-        if (await gpt2ReleaseFlatReachable()) {
+        if (await gpt2BundleReachable(import.meta.env.BASE_URL)) {
           if (cancelled) return;
           setPreset("gpt2-small");
           setStatus(
-            "gpt2-small loads from the GitHub release on Load model (~500MB download in your browser; may take a few minutes the first time).",
+            "gpt2-small ready — press Load model (~500MB weights stream from GitHub via this host; first load may take a few minutes).",
           );
           return;
         }
         if (!cancelled) {
           setStatus(
-            "gpt2-small release files are not reachable yet. A maintainer must run Publish GPT-2 web bundle once (link below).",
+            "gpt2-small manifest not found on this host. Ensure manifest.json is deployed and weights proxy is configured (Vercel rewrite).",
           );
         }
       } catch {
         if (!cancelled) {
-          setStatus("Could not reach the gpt2-small GitHub release (offline?). Defaulting to tiny-gpt.");
+          setStatus("Could not reach gpt2-small manifest on this host (offline?). Defaulting to tiny-gpt.");
         }
       }
     })();
@@ -137,13 +137,12 @@ export function LLMPlayground() {
         return;
       }
 
-      setStatus(
-        "Loading gpt2-small from GitHub release gpt2-web-v1 (manifest + tokenizer + ~500MB weights)…",
-      );
-      const manifest = await fetchJSON<WebManifest>(GPT2_RELEASE_FLAT.manifest);
-      const tokUrl = GPT2_RELEASE_FLAT.tokenizer;
-      const weightsUrl = GPT2_RELEASE_FLAT.weights;
-      const sourceNote = " — source: GitHub release";
+      const gpt2 = gpt2ModelUrls(import.meta.env.BASE_URL);
+      setStatus("Loading gpt2-small (manifest + tokenizer + ~500MB weights via this host)…");
+      const manifest = await fetchJSON<WebManifest>(gpt2.manifest);
+      const tokUrl = gpt2.tokenizer;
+      const weightsUrl = gpt2.weights;
+      const sourceNote = "";
 
       const tokObj = await fetchJSON<TokJson>(tokUrl);
       let tokenizer: RegexBPETokenizer | Gpt2TiktokenTokenizer;
@@ -296,7 +295,7 @@ export function LLMPlayground() {
               <label htmlFor="llm-preset">Model bundle</label>
               <select id="llm-preset" value={preset} onChange={(e) => setPreset(e.target.value as ModelPreset)}>
                 <option value="tiny-gpt">tiny-gpt (trained in-repo)</option>
-                <option value="gpt2-small">gpt2-small (loads ~500MB from GitHub release on Load model)</option>
+                <option value="gpt2-small">gpt2-small (loads ~500MB weights via this host from GitHub release)</option>
               </select>
             </div>
             <div className="btn-row">
@@ -336,8 +335,8 @@ export function LLMPlayground() {
                   <a href={GPT2_BUNDLE_PUBLISH_WORKFLOW} target="_blank" rel="noreferrer">
                     Publish GPT-2 web bundle
                   </a>{" "}
-                  once, <em>Load model</em> will pull <span className="mono">gpt2-small</span> from the{" "}
-                  <span className="mono">gpt2-web-v1</span> release in your browser (~500MB download).
+                  once, <em>Load model</em> streams <span className="mono">gpt2-small</span> weights from the{" "}
+                  <span className="mono">gpt2-web-v1</span> release through this site (~500MB; no local download).
                 </p>
                 <div className="btn-row">
                   <button type="button" className="primary" onClick={switchToTinyGptClear}>

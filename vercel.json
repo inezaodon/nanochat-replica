@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/models/gpt2-small/weights.f32.bin",
+      "destination": "https://github.com/inezaodon/nanochat-replica/releases/download/gpt2-web-v1/browser-gpt2-weights.f32.bin"
+    }
+  ]
+}

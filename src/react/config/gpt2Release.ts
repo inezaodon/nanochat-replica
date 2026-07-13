@@ -1,21 +1,26 @@
 /**
- * Flat files uploaded by `.github/workflows/publish-gpt2-web-bundle.yml` to tag `gpt2-web-v1`.
- * The GPT DEMO loads gpt2-small from these URLs on every Load model click (~500MB in-browser download).
- *
- * Browsers cannot trigger GitHub Actions (no repo token); publishing the release is a maintainer step.
+ * Same-origin gpt2-small paths. Manifest + tokenizer ship in `public/models/gpt2-small/`.
+ * Weights (~622MB) are proxied to the GitHub release (Vercel rewrite; Vite dev proxy)
+ * so the browser never cross-origin-fetches release-assets.githubusercontent.com (no CORS).
  */
-export const GPT2_RELEASE_FLAT = {
-  manifest:
-    "https://github.com/inezaodon/nanochat-replica/releases/download/gpt2-web-v1/browser-gpt2-manifest.json",
-  tokenizer:
-    "https://github.com/inezaodon/nanochat-replica/releases/download/gpt2-web-v1/browser-gpt2-tokenizer.json",
-  weights:
-    "https://github.com/inezaodon/nanochat-replica/releases/download/gpt2-web-v1/browser-gpt2-weights.f32.bin",
-} as const;
+export function gpt2ModelUrls(baseUrl: string) {
+  const prefix = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+  const dir = `${prefix}models/gpt2-small`;
+  return {
+    manifest: `${dir}/manifest.json`,
+    tokenizer: `${dir}/tokenizer.json`,
+    weights: `${dir}/weights.f32.bin`,
+  } as const;
+}
 
-export async function gpt2ReleaseFlatReachable(): Promise<boolean> {
+/** GitHub release tag used by Vercel/Vite proxies for the weights file only. */
+export const GPT2_RELEASE_WEIGHTS =
+  "https://github.com/inezaodon/nanochat-replica/releases/download/gpt2-web-v1/browser-gpt2-weights.f32.bin";
+
+export async function gpt2BundleReachable(baseUrl: string): Promise<boolean> {
   try {
-    const r = await fetch(GPT2_RELEASE_FLAT.manifest, { method: "GET", cache: "no-store" });
+    const { manifest } = gpt2ModelUrls(baseUrl);
+    const r = await fetch(manifest, { method: "GET", cache: "no-store" });
     return r.ok;
   } catch {
     return false;

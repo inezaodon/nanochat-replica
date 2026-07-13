@@ -1,0 +1,4 @@
+{
+  "tokenizer_type": "gpt2_tiktoken",
+  "encoding": "gpt2"
+}

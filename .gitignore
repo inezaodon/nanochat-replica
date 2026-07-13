@@ -16,8 +16,8 @@ data/course/generated_exam_facts.json
 # ND / course release checkpoints (large .pt files)
 weights/
 
-# GPT-2 browser bundle (~500MB f32); filled by npm postinstall or prepare:gpt2-web
-public/models/gpt2-small/
+# GPT-2 browser weights (~622MB); manifest + tokenizer committed; weights proxied from release
+public/models/gpt2-small/weights.f32.bin
 
 # Course data downloads (large / reproducible via fetch script)
 data/course/openweb10k.txt

@@ -12,8 +12,8 @@ export function Architecture() {
       "2) Tiny model — train: python -m llm.train --data data/training_corpus.txt --device cpu",
       "2b) Bigger corpus: python -m llm.expand_corpus --out data/corpus_expanded.txt --include-local data/training_corpus.txt --hf-preset wikitext-103 ag_news",
       "3) Tiny model — export: python -m llm.export_web --ckpt checkpoints/tiny-gpt/model.pt --tokenizer checkpoints/tiny-gpt/tokenizer.json --out_dir public/models/tiny-gpt",
-      "4) ND GPT-2 — maintainer runs Actions → Publish GPT-2 web bundle once (release gpt2-web-v1). Load model then pulls ~500MB from that release in the browser.",
-      "5) Run web: npm run dev — gpt2-small auto-selects when the release is reachable; press Load model.",
+      "4) ND GPT-2 — maintainer runs Actions → Publish GPT-2 web bundle once (release gpt2-web-v1). Vercel/Vite proxy streams weights to the browser on Load model (~500MB).",
+      "5) Run web: npm run dev — gpt2-small auto-selects when manifest is on this host; press Load model.",
     ],
     [],
   );
