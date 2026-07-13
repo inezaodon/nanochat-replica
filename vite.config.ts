@@ -8,6 +8,12 @@ const gpt2WeightsProxy = {
     changeOrigin: true,
     rewrite: () => "",
   },
+  "/nanochat-replica/models/gpt2-small/weights.f32.bin": {
+    target:
+      "https://github.com/inezaodon/nanochat-replica/releases/download/gpt2-web-v1/browser-gpt2-weights.f32.bin",
+    changeOrigin: true,
+    rewrite: () => "",
+  },
 };
 
 export default defineConfig(({ mode }) => ({

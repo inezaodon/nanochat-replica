@@ -19,9 +19,12 @@ export const GPT2_RELEASE_WEIGHTS =
 
 export async function gpt2BundleReachable(baseUrl: string): Promise<boolean> {
   try {
-    const { manifest } = gpt2ModelUrls(baseUrl);
-    const r = await fetch(manifest, { method: "GET", cache: "no-store" });
-    return r.ok;
+    const urls = gpt2ModelUrls(baseUrl);
+    const [manifestRes, weightsRes] = await Promise.all([
+      fetch(urls.manifest, { method: "GET", cache: "no-store" }),
+      fetch(urls.weights, { method: "HEAD", cache: "no-store" }),
+    ]);
+    return manifestRes.ok && (weightsRes.ok || weightsRes.status === 206);
   } catch {
     return false;
   }

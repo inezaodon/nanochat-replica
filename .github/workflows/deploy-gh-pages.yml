@@ -27,10 +27,24 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Restore gpt2-small web bundle cache
+        id: gpt2-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: public/models/gpt2-small
+          key: gpt2-small-web-gpt2-web-v1-${{ runner.os }}
+
       - name: Install
         run: npm ci
         env:
-          SKIP_GPT2_WEB_FETCH: "1"
+          SKIP_GPT2_WEB_FETCH: ${{ steps.gpt2-cache.outputs.cache-hit == 'true' && '1' || '' }}
+
+      - name: Save gpt2-small web bundle cache
+        if: success() && steps.gpt2-cache.outputs.cache-hit != 'true' && hashFiles('public/models/gpt2-small/manifest.json') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: public/models/gpt2-small
+          key: gpt2-small-web-gpt2-web-v1-${{ runner.os }}
 
       - name: Lint
         run: npm run lint

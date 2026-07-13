@@ -78,7 +78,7 @@ export function LLMPlayground() {
         }
         if (!cancelled) {
           setStatus(
-            "gpt2-small manifest not found on this host. Ensure manifest.json is deployed and weights proxy is configured (Vercel rewrite).",
+            "gpt2-small manifest or weights missing on this host. On Vercel use build command npm run build (not build:github). Weights need the vercel.json proxy or a completed Pages deploy.",
           );
         }
       } catch {
@@ -138,13 +138,14 @@ export function LLMPlayground() {
       }
 
       const gpt2 = gpt2ModelUrls(import.meta.env.BASE_URL);
-      setStatus("Loading gpt2-small (manifest + tokenizer + ~500MB weights via this host)…");
-      const manifest = await fetchJSON<WebManifest>(gpt2.manifest);
-      const tokUrl = gpt2.tokenizer;
-      const weightsUrl = gpt2.weights;
-      const sourceNote = "";
 
+      setStatus(`Fetching manifest… (${gpt2.manifest})`);
+      const manifest = await fetchJSON<WebManifest>(gpt2.manifest);
+
+      setStatus(`Fetching tokenizer… (${gpt2.tokenizer})`);
+      const tokUrl = gpt2.tokenizer;
       const tokObj = await fetchJSON<TokJson>(tokUrl);
+
       let tokenizer: RegexBPETokenizer | Gpt2TiktokenTokenizer;
       if (tokObj.tokenizer_type === "gpt2_tiktoken" || manifest.tokenizer_type === "gpt2_tiktoken") {
         const g2 = new Gpt2TiktokenTokenizer();
@@ -154,11 +155,11 @@ export function LLMPlayground() {
         tokenizer = RegexBPETokenizer.fromJSON(tokObj);
       }
 
-      setStatus(
-        `Downloading weights (~500MB f32)${sourceNote} — tab may look frozen until this finishes…`,
-      );
+      setStatus(`Downloading weights (~500MB) from ${gpt2.weights} — tab may look frozen…`);
       await yieldToMain();
+      const weightsUrl = gpt2.weights;
       const buf = await fetchArrayBuffer(weightsUrl);
+      const sourceNote = "";
       setStatus("Mapping weight buffer into tensors (may pause 10–30s)…");
       await yieldToMain();
       const tensors = loadTensors(buf, manifest);
@@ -170,10 +171,11 @@ export function LLMPlayground() {
         `Loaded gpt2-small${sourceNote}: vocab=${manifest.config.vocab_size}, layers=${manifest.config.n_layer}, heads=${manifest.config.n_head}, embd=${manifest.config.n_embd}. Use ≤20 new tokens per click — full GPT-2 in JS is slow.`,
       );
     } catch (e) {
-      const msg = (e as Error).message;
+      const err = e as Error;
+      const msg = err.message || String(e);
       if (preset === "gpt2-small") {
         setStatus(
-          `${GPT2_FAIL_PREFIX} ${msg} If the release is missing, a maintainer must run Publish GPT-2 web bundle once (link below).`,
+          `${GPT2_FAIL_PREFIX} ${msg} — Check DevTools → Network for the failing URL. On Vercel: build must be npm run build and vercel.json must proxy weights.`,
         );
       } else {
         setStatus(msg);
