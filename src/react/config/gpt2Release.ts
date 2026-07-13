@@ -1,6 +1,6 @@
 /**
  * Flat files uploaded by `.github/workflows/publish-gpt2-web-bundle.yml` to tag `gpt2-web-v1`.
- * Used when `public/models/gpt2-small` is absent (e.g. fresh clone, GitHub Pages without postinstall cache).
+ * The GPT DEMO loads gpt2-small from these URLs on every Load model click (~500MB in-browser download).
  *
  * Browsers cannot trigger GitHub Actions (no repo token); publishing the release is a maintainer step.
  */

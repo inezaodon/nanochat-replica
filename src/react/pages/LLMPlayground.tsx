@@ -68,34 +68,22 @@ export function LLMPlayground() {
     let cancelled = false;
     (async () => {
       try {
-        const localManifest = `${modelsDir("gpt2-small")}/manifest.json`;
-        const r = await fetch(localManifest, { cache: "no-store" });
-        if (cancelled) return;
-        if (r.ok) {
-          setPreset("gpt2-small");
-          setStatus(
-            "gpt2-small bundle found on this host — press Load model. (tiny-gpt is a small char-LM for demos.)",
-          );
-          return;
-        }
         if (await gpt2ReleaseFlatReachable()) {
           if (cancelled) return;
           setPreset("gpt2-small");
           setStatus(
-            "gpt2-small is not under public/models, but the GitHub release files exist — press Load model to pull weights in the browser (large download; may take a minute).",
+            "gpt2-small loads from the GitHub release on Load model (~500MB download in your browser; may take a few minutes the first time).",
           );
           return;
         }
         if (!cancelled) {
           setStatus(
-            "gpt2-small not on disk and the GitHub release has no browser files yet. A maintainer must run Publish GPT-2 web bundle once (link below). Developers: npm run fetch:gpt2-web or npm run prepare:gpt2-web.",
+            "gpt2-small release files are not reachable yet. A maintainer must run Publish GPT-2 web bundle once (link below).",
           );
         }
       } catch {
         if (!cancelled) {
-          setStatus(
-            "Could not probe gpt2-small (offline?). Defaulting to tiny-gpt. When online, try again or run npm run fetch:gpt2-web.",
-          );
+          setStatus("Could not reach the gpt2-small GitHub release (offline?). Defaulting to tiny-gpt.");
         }
       }
     })();
@@ -149,25 +137,13 @@ export function LLMPlayground() {
         return;
       }
 
-      const gpt2Local = modelsDir("gpt2-small");
-      let manifest: WebManifest;
-      let tokUrl: string;
-      let weightsUrl: string;
-      let sourceNote = "";
-
-      try {
-        manifest = await fetchJSON<WebManifest>(`${gpt2Local}/manifest.json`);
-        tokUrl = `${gpt2Local}/tokenizer.json`;
-        weightsUrl = `${gpt2Local}/${manifest.weights}`;
-      } catch {
-        setStatus(
-          "No local gpt2-small folder — loading manifest, tokenizer, and weights from GitHub release gpt2-web-v1 (large; first time can take several minutes)…",
-        );
-        manifest = await fetchJSON<WebManifest>(GPT2_RELEASE_FLAT.manifest);
-        tokUrl = GPT2_RELEASE_FLAT.tokenizer;
-        weightsUrl = GPT2_RELEASE_FLAT.weights;
-        sourceNote = " — source: GitHub release";
-      }
+      setStatus(
+        "Loading gpt2-small from GitHub release gpt2-web-v1 (manifest + tokenizer + ~500MB weights)…",
+      );
+      const manifest = await fetchJSON<WebManifest>(GPT2_RELEASE_FLAT.manifest);
+      const tokUrl = GPT2_RELEASE_FLAT.tokenizer;
+      const weightsUrl = GPT2_RELEASE_FLAT.weights;
+      const sourceNote = " — source: GitHub release";
 
       const tokObj = await fetchJSON<TokJson>(tokUrl);
       let tokenizer: RegexBPETokenizer | Gpt2TiktokenTokenizer;
@@ -198,7 +174,7 @@ export function LLMPlayground() {
       const msg = (e as Error).message;
       if (preset === "gpt2-small") {
         setStatus(
-          `${GPT2_FAIL_PREFIX} ${msg} This page cannot start GitHub Actions (no repo token). If the release is missing, open Publish GPT-2 web bundle (below) once. If your browser blocks cross-origin downloads, run npm run fetch:gpt2-web or npm run prepare:gpt2-web locally.`,
+          `${GPT2_FAIL_PREFIX} ${msg} If the release is missing, a maintainer must run Publish GPT-2 web bundle once (link below).`,
         );
       } else {
         setStatus(msg);
@@ -320,7 +296,7 @@ export function LLMPlayground() {
               <label htmlFor="llm-preset">Model bundle</label>
               <select id="llm-preset" value={preset} onChange={(e) => setPreset(e.target.value as ModelPreset)}>
                 <option value="tiny-gpt">tiny-gpt (trained in-repo)</option>
-                <option value="gpt2-small">gpt2-small (ND weights-v1 — ships via release bundle or prepare:gpt2-web)</option>
+                <option value="gpt2-small">gpt2-small (loads ~500MB from GitHub release on Load model)</option>
               </select>
             </div>
             <div className="btn-row">
@@ -361,9 +337,7 @@ export function LLMPlayground() {
                     Publish GPT-2 web bundle
                   </a>{" "}
                   once, <em>Load model</em> will pull <span className="mono">gpt2-small</span> from the{" "}
-                  <span className="mono">gpt2-web-v1</span> release when local <span className="mono">public/models/gpt2-small</span> is missing. For
-                  offline dev or if the browser blocks those downloads: <span className="mono">npm run fetch:gpt2-web</span> or{" "}
-                  <span className="mono">npm run prepare:gpt2-web</span>, then restart <span className="mono">npm run dev</span>.
+                  <span className="mono">gpt2-web-v1</span> release in your browser (~500MB download).
                 </p>
                 <div className="btn-row">
                   <button type="button" className="primary" onClick={switchToTinyGptClear}>

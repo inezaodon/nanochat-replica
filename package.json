@@ -9,7 +9,6 @@
     "build:github": "vite build --mode github",
     "preview": "vite preview",
     "lint": "eslint .",
-    "postinstall": "node scripts/ensure-gpt2-web.mjs",
     "fetch:gpt2-web": "node scripts/ensure-gpt2-web.mjs",
     "prepare:gpt2-web": "python -m llm.prepare_course_model --out_dir public/models/gpt2-small"
   },
