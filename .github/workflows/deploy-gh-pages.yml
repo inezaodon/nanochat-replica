@@ -32,23 +32,27 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: public/models/gpt2-small
-          key: gpt2-small-web-gpt2-web-v1-${{ runner.os }}
+          key: gpt2-small-web-v2-${{ runner.os }}
 
       - name: Install
         run: npm ci
-        env:
-          SKIP_GPT2_WEB_FETCH: ${{ steps.gpt2-cache.outputs.cache-hit == 'true' && '1' || '' }}
 
-      - name: Fetch gpt2-small weights (cache miss)
-        if: steps.gpt2-cache.outputs.cache-hit != 'true'
-        run: npm run fetch:gpt2-web
+      - name: Ensure gpt2-small weights
+        run: |
+          weights="public/models/gpt2-small/weights.f32.bin"
+          if [ ! -f "$weights" ] || [ "$(wc -c < "$weights")" -lt 50000000 ]; then
+            echo "Weights missing or too small — fetching from GitHub release…"
+            npm run fetch:gpt2-web
+          fi
+          ls -lh public/models/gpt2-small/
+          test "$(wc -c < "$weights")" -gt 50000000
 
       - name: Save gpt2-small web bundle cache
-        if: success() && steps.gpt2-cache.outputs.cache-hit != 'true' && hashFiles('public/models/gpt2-small/manifest.json') != ''
+        if: success()
         uses: actions/cache/save@v4
         with:
           path: public/models/gpt2-small
-          key: gpt2-small-web-gpt2-web-v1-${{ runner.os }}
+          key: gpt2-small-web-v2-${{ runner.os }}
 
       - name: Lint
         run: npm run lint
@@ -71,4 +75,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-

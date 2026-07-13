@@ -1,14 +1,4 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "rewrites": [
-    {
-      "source": "/models/gpt2-small/weights.f32.bin",
-      "destination": "https://github.com/inezaodon/nanochat-replica/releases/download/gpt2-web-v1/browser-gpt2-weights.f32.bin"
-    },
-    {
-      "source": "/nanochat-replica/models/gpt2-small/weights.f32.bin",
-      "destination": "https://github.com/inezaodon/nanochat-replica/releases/download/gpt2-web-v1/browser-gpt2-weights.f32.bin"
-    }
-  ]
+  "outputDirectory": "dist"
 }

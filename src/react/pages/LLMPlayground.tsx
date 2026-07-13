@@ -171,12 +171,12 @@ export function LLMPlayground() {
         `Loaded gpt2-small${sourceNote}: vocab=${manifest.config.vocab_size}, layers=${manifest.config.n_layer}, heads=${manifest.config.n_head}, embd=${manifest.config.n_embd}. Use ≤20 new tokens per click — full GPT-2 in JS is slow.`,
       );
     } catch (e) {
-      const err = e as Error;
-      const msg = err.message || String(e);
+      const msg =
+        err.message === "Load failed" || err.message === "Failed to fetch"
+          ? `${err.message} (network/CORS — weights must load same-origin via /api/gpt2-weights on Vercel)`
+          : err.message || String(e);
       if (preset === "gpt2-small") {
-        setStatus(
-          `${GPT2_FAIL_PREFIX} ${msg} — Check DevTools → Network for the failing URL. On Vercel: build must be npm run build and vercel.json must proxy weights.`,
-        );
+        setStatus(`${GPT2_FAIL_PREFIX} ${msg}`);
       } else {
         setStatus(msg);
       }

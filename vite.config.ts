@@ -1,16 +1,17 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
+const RELEASE_WEIGHTS =
+  "https://github.com/inezaodon/nanochat-replica/releases/download/gpt2-web-v1/browser-gpt2-weights.f32.bin";
+
 const gpt2WeightsProxy = {
-  "/models/gpt2-small/weights.f32.bin": {
-    target:
-      "https://github.com/inezaodon/nanochat-replica/releases/download/gpt2-web-v1/browser-gpt2-weights.f32.bin",
+  "/api/gpt2-weights": {
+    target: RELEASE_WEIGHTS,
     changeOrigin: true,
     rewrite: () => "",
   },
-  "/nanochat-replica/models/gpt2-small/weights.f32.bin": {
-    target:
-      "https://github.com/inezaodon/nanochat-replica/releases/download/gpt2-web-v1/browser-gpt2-weights.f32.bin",
+  "/nanochat-replica/api/gpt2-weights": {
+    target: RELEASE_WEIGHTS,
     changeOrigin: true,
     rewrite: () => "",
   },
@@ -31,4 +32,3 @@ export default defineConfig(({ mode }) => ({
     proxy: gpt2WeightsProxy,
   },
 }));
-

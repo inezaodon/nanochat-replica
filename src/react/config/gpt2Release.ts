@@ -1,7 +1,7 @@
 /**
- * Same-origin gpt2-small paths. Manifest + tokenizer ship in `public/models/gpt2-small/`.
- * Weights (~622MB) are proxied to the GitHub release (Vercel rewrite; Vite dev proxy)
- * so the browser never cross-origin-fetches release-assets.githubusercontent.com (no CORS).
+ * gpt2-small load paths. Manifest + tokenizer ship in `public/models/gpt2-small/`.
+ * Weights (~622MB): Vercel/local dev use `/api/gpt2-weights` edge stream;
+ * GitHub Pages serves bundled `weights.f32.bin` from deploy.
  */
 export function gpt2ModelUrls(baseUrl: string) {
   const prefix = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
@@ -9,11 +9,18 @@ export function gpt2ModelUrls(baseUrl: string) {
   return {
     manifest: `${dir}/manifest.json`,
     tokenizer: `${dir}/tokenizer.json`,
-    weights: `${dir}/weights.f32.bin`,
+    weights: gpt2WeightsUrl(prefix),
   } as const;
 }
 
-/** GitHub release tag used by Vercel/Vite proxies for the weights file only. */
+function gpt2WeightsUrl(prefix: string): string {
+  if (typeof window !== "undefined" && window.location.hostname.endsWith("github.io")) {
+    return `${prefix}models/gpt2-small/weights.f32.bin`;
+  }
+  return `${prefix}api/gpt2-weights`;
+}
+
+/** GitHub release tag — source for edge proxy and CI fetch. */
 export const GPT2_RELEASE_WEIGHTS =
   "https://github.com/inezaodon/nanochat-replica/releases/download/gpt2-web-v1/browser-gpt2-weights.f32.bin";
 
