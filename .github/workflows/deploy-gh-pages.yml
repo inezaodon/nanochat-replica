@@ -39,6 +39,10 @@ jobs:
         env:
           SKIP_GPT2_WEB_FETCH: ${{ steps.gpt2-cache.outputs.cache-hit == 'true' && '1' || '' }}
 
+      - name: Fetch gpt2-small weights (cache miss)
+        if: steps.gpt2-cache.outputs.cache-hit != 'true'
+        run: npm run fetch:gpt2-web
+
       - name: Save gpt2-small web bundle cache
         if: success() && steps.gpt2-cache.outputs.cache-hit != 'true' && hashFiles('public/models/gpt2-small/manifest.json') != ''
         uses: actions/cache/save@v4
